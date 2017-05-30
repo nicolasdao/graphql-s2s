@@ -1,0 +1,35 @@
+{
+  "name": "graphql-s2s",
+  "version": "0.0.1",
+  "description": "Transpile an enriched GraphQL string schema (e.g. support for metadata, inheritance, generic types, ...) into the standard string schema understood by graphql.js and the Apollo server client.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neapers/graphql-s2s.git"
+  },
+  "keywords": [
+    "graphql",
+    "schema",
+    "transpiler",
+    "metadata",
+    "inheritance",
+    "generic",
+    "types",
+    "neap"
+  ],
+  "author": "Nicolas Dao",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/neapers/graphql-s2s/issues"
+  },
+  "homepage": "https://github.com/neapers/graphql-s2s#readme",
+  "dependencies": {
+    "lodash": "^4.17.4"
+  },
+  "devDependencies": {
+    "mocha": "^3.4.2"
+  }
+}
