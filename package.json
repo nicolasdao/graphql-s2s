@@ -26,6 +26,9 @@
     "url": "https://github.com/neapers/graphql-s2s/issues"
   },
   "homepage": "https://github.com/neapers/graphql-s2s#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "lodash": "^4.17.4"
   },
