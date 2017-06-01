@@ -2,9 +2,10 @@
 
 
 # GraghQL Schema-2-Schema Transpiler
-[1]
+[![Tests][1]][2]
 
 [1]: https://travis-ci.org/nicolasdao/graphql-s2s.svg?branch=master
+[2]: https://travis-ci.org/nicolasdao/graphql-s2s
 
 ## This Is What We re Up To
 We are Neap, an Australian Technology consultancy powering the startup ecosystem in Sydney. We simply love building Tech and also meeting new people, so don't hesitate to connect with us at [https://neap.co](https://neap.co).
