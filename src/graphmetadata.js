@@ -56,7 +56,7 @@ const extractGraphMetadata = (schema = '') => {
 	.next(metadata => _.toArray(metadata))
 	.val();
 
-	return { metadata: graphQlMetadata, stdSchema: escSchema.replace(/@(.*?)_cr_/g, '').replace(/_cr_/g, '\n') };
+	return graphQlMetadata;
 }
 
 const removeGraphMetadata = (schema = '') => 
