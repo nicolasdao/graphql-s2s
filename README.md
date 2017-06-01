@@ -9,5 +9,8 @@
 [3]: https://travis-ci.org/nicolasdao/graphql-s2s.svg?branch=master
 [4]: https://travis-ci.org/nicolasdao/graphql-s2s
 
+## What It Does
+GraphQL S2S allows to enrich the standard GraphQL Schema string used by both Graphql.js and the Apollo Server. 
+
 ## This Is What We re Up To
 We are Neap, an Australian Technology consultancy powering the startup ecosystem in Sydney. We simply love building Tech and also meeting new people, so don't hesitate to connect with us at [https://neap.co](https://neap.co).
