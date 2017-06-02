@@ -5,6 +5,7 @@
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
 */
+const _ = require('lodash');
 const { inspect } = require('util');
 const assert = require('assert');
 const { getSchemaParts, transpileSchema, extractGraphMetadata } = require('../index');
@@ -283,6 +284,31 @@ describe('index', () =>
       assert.equal(type2Prop1.details.result.originName, 'PostRating!');
       assert.equal(type2Prop1.details.result.isGen, false);
       assert.equal(type2Prop1.details.result.name, 'PostRating!');
+    })));
+
+const schema_input_pxbdksb204h = `
+type Paged<T> {
+  data: [T]
+  cursor: ID
+}
+type Post {
+  name
+}
+type User {
+  username: String!
+  posts: Paged<Post>
+} 
+`
+
+describe('index', () => 
+  describe('#getSchemaParts: GENERIC TYPES', () => 
+    it('Should create new types for each instance of a generic type.', () => {
+      const schemaParts = getSchemaParts(schema_input_pxbdksb204h);
+
+      assert.ok(schemaParts);
+      assert.equal(schemaParts.length, 4);
+      const genObj = _(schemaParts).find(s => s.type == 'TYPE' && s.name == 'PagedPost');
+      assert.ok(genObj, "The object 'PagedPost' that should have been auto-generated from Paged<Post> has not been created.");
     })));
 
 const schema_input_dfewcsad356 = `

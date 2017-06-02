@@ -290,9 +290,12 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 				})).val()
 			: prop);
 		const newSchemaObjStr = parseSchemaObjToString(baseGenObj.comments, baseGenObj.type, name, baseGenObj.implements, blockProps);
-		return newSchemaObjStr;
+		return { 
+			obj: { comments: baseGenObj.comments, type: baseGenObj.type, name: name, implements: baseGenObj.implements, blockProps: blockProps, genericType: null },
+			stringObj: newSchemaObjStr
+		};
 	}
-	else return null;
+	else return { obj: null, stringObj: null };
 }
 
 const buildSchemaString = schemaObjs => _(schemaObjs)
@@ -300,14 +303,18 @@ const buildSchemaString = schemaObjs => _(schemaObjs)
 	.map(obj => parseSchemaObjToString(obj.comments, obj.type, obj.name, obj.implements, obj.blockProps))
 	.join('\n') + 
 	_(memoizedGenericSchemaObjects)
-	.map((value, key) => createNewSchemaObjectFromGeneric(value, schemaObjs))
+	.map((value, key) => createNewSchemaObjectFromGeneric(value, schemaObjs).stringObj)
 	.join('\n');
 
-const getSchemaParts = (graphQlSchema, metadata) => chain(_([getInterfaces, getAbstracts, getTypes, getInputs, getEnums]
+const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(_([getInterfaces, getAbstracts, getTypes, getInputs, getEnums]
 		.reduce((objects, getObjects) => objects.concat(getObjects(getSchemaBits(graphQlSchema), metadata)), [])))
 	.next(firstSchemaBreakDown => _.toArray(firstSchemaBreakDown
 		.map(obj => getObjWithExtensions(obj, firstSchemaBreakDown))
-		.map(obj => addComments(obj, getCommentsBits(graphQlSchema))))).val();
+		.map(obj => addComments(obj, getCommentsBits(graphQlSchema)))))
+	.next(v => includeNewGenTypes 
+		? v.concat(_.toArray(_(memoizedGenericSchemaObjects).map((value, key) => createNewSchemaObjectFromGeneric(value, v).obj)))
+		: v)
+	.val();
 
 const resetMemory = () => {
 	s = null;
@@ -321,7 +328,7 @@ const resetMemory = () => {
 module.exports = {
 	getSchemaParts: (graphQlSchema) => chain(resetMemory())
 		.next(v => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
-		.next(metadata => getSchemaParts(metadata.stdSchema, metadata.metadata))
+		.next(metadata => getSchemaParts(metadata.stdSchema, metadata.metadata, true))
 		.next(v => { resetMemory(); return v; })
 		.val(),
 	transpileSchema: (graphQlSchema) => chain(resetMemory())
