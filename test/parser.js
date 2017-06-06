@@ -271,8 +271,8 @@ type DatasetSize {
 }`
 
 describe('index', () => 
-  describe('#transpileSchema: COMPLEX COMMENTS', () => 
-    it('Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
+  describe('#transpileSchema: COMPLEX COMMENTS WITH MARKDOWN CODE BLOCKS', () => 
+    it('Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
       const output = transpileSchema(schema_input_cdwbqjf24cden76532);
       const answer = compressString(output);
       const correct = compressString(schema_output_cdwbqjf24cden76532);
