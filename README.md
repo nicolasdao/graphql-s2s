@@ -9,12 +9,56 @@
 [3]: https://travis-ci.org/nicolasdao/graphql-s2s.svg?branch=master
 [4]: https://travis-ci.org/nicolasdao/graphql-s2s
 
+## Install
+```js
+npm install 'graphql-s2s' --save
+```
+
+## Usage
+```js
+const { transpileSchema } = require('graphql-s2s');
+const { makeExecutableSchema } = require('graphql-tools');
+
+const schema = `
+type Node {
+	id: ID!
+}
+
+type Person inherits Node {
+	firstname: String
+	lastname: String
+}
+
+type Student inherits Person {
+	nickname: String
+}
+
+type Query {
+  students: [Student]
+}
+`
+
+const resolver = {
+        Query: {
+            students(root, args, context) {
+            	// replace this dummy code with your own logic to extract students.
+                return [{ id: 1, firstname: "Carry", lastname: "Connor", nickname: "Cannie" }]; 
+            }
+        }
+    };
+
+const executableSchema = makeExecutableSchema({
+  typeDefs: [transpileSchema(schema)],
+  resolvers: resolver
+});
+```
+
 ## What It Does
-Defining GraphQL schemas that could look like this:
+GraphQL S2S enriches the standard GraphQL Schema string used by both [graphql.js](https://github.com/graphql/graphql-js) and the [Apollo Server](https://github.com/apollographql/graphql-tools). The enriched schema supports:
+
+[**Type Inheritance**](#type-inheritance)
 ```js
 const schema = `
-# Defining a custom 'node' metadata attribute
-@node
 type Node {
 	id: ID!
 }
@@ -25,39 +69,61 @@ type Person inherits Node {
 	lastname: String
 }
 
+# Inheriting from the 'Person' type
 type Student inherits Person {
 	nickname: String
-
-	# Defining another custom 'edge' metadata, and supporting a generic type
-	@edge(some other metadata using whatever syntax I want)
-	questions: Paged<Question>
 }
-
-type Question inherits Node {
-	name: String!
-	text: String!
-}
-
+`
+```
+[**Generic Types**](#generic-types)
+```js
+const schema = `
 # Defining a generic type
 type Paged<T> {
 	data: [T]
 	cursor: ID
 }
+
+type Question {
+	name: String!
+	text: String!
+}
+
+# Using the generic type
+type Student {
+	name: String
+	questions: Paged<Question>
+}
+
+# Using the generic type
+type Teacher {
+	name: String
+	students: Paged<Student>
+}
 `
 ```
-GraphQL S2S allows to enrich the standard GraphQL Schema string used by both [graphql.js](https://github.com/graphql/graphql-js) and the [Apollo Server](https://github.com/apollographql/graphql-tools). The enriched schema supports:
-- [**Type Inheritance**](#type-inheritance)
-- [**Generic Types**](#generic-types)
-- [**Metadata Decoration**](#metadata-decoration)
+[**Metadata Decoration**](#metadata-decoration)
+```js
+const schema = `
+# Defining a custom 'node' metadata attribute
+@node
+type Node {
+	id: ID!
+}
+
+type Student inherits Node {
+	name: String
+
+	# Defining another custom 'edge' metadata, and supporting a generic type
+	@edge(some other metadata using whatever syntax I want)
+	questions: [String]
+}
+`
+```
 
 The enriched schema provides a richer and more compact notation. The transpiler converts the enriched schema into the standard expected by [graphql.js](https://github.com/graphql/graphql-js) (using the _buildSchema_ method) as well as the [Apollo Server](https://github.com/apollographql/graphql-tools).
 
 _Metadata_ can be added to decorate the schema types and properties. Add whatever you want as long as it starts with _@_ and start hacking your schema. The original intent of that feature was to decoration the schema with metadata _@node_ and _@edge_ so we coould add metadata about the nature of the relations between types.
-
-## Install
-```js
-npm install 'graphql-s2s' --save
-```
 
 ## Examples
 _WARNING: the following examples will be based on '[graphql-tools](https://github.com/apollographql/graphql-tools)' from the Apollo team, but the string schema could also be used with the 'buildSchema' method from graphql.js_

@@ -77,7 +77,7 @@ type PostUserRating {
 describe('index', () => 
   describe('#transpileSchema: INHERITANCE', () => 
     it('Should add properties from the super type to the sub type.', () => {
-    	const output = transpileSchema(schema_input_1);
+      const output = transpileSchema(schema_input_1);
       const answer = compressString(output);
       const correct = compressString(schema_output_1);
       assert.equal(answer,correct);
@@ -178,6 +178,104 @@ describe('index', () =>
       const output = transpileSchema(schema_input_3);
       const answer = compressString(output);
       const correct = compressString(schema_output_3);
+      assert.equal(answer,correct);
+    })));
+
+const schema_input_cdwbqjf24cden76532 = `
+# ### Page - Pagination Metadata
+# The Page object represents metadata about the size of the dataset returned. It helps with pagination.
+# Example:
+#
+# \`\`\`js
+# getData(first: 100, skip: 200)
+# \`\`\`
+# Skips the first 200 items, and gets the next 100.
+#
+# To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
+# example above, the returned Page object could be:
+#
+# \`\`\`js
+# {
+# first: 100,
+# skip: 200,
+# current: 3,
+# total: {
+#   size: 1000,
+#   pages: 10
+# }
+# }
+# \`\`\`
+type Page {
+  # The pagination parameter sent in the query
+  first: Int!
+
+  # The pagination parameter sent in the query
+  skip: Int!
+
+  # The convertion from 'first' and 'after' in terms of the current page
+  # (e.g. { first: 100, after: 200 } -> current: 3).
+    current: Int!
+
+    # Inspect the total size of your dataset ignoring pagination.
+    total: DatasetSize
+}
+
+# ### DatasetSize - Pagination Metadata
+# Used in the Page object to describe the total number of pages available.
+type DatasetSize {
+  size: Int!
+  pages: Int!
+}
+`
+const schema_output_cdwbqjf24cden76532 = `
+# ### Page - Pagination Metadata
+# The Page object represents metadata about the size of the dataset returned. It helps with pagination.
+# Example:
+#
+# \`\`\`js
+# getData(first: 100, skip: 200)
+# \`\`\`
+# Skips the first 200 items, and gets the next 100.
+#
+# To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
+# example above, the returned Page object could be:
+#
+# \`\`\`js
+# {
+# first: 100,
+# skip: 200,
+# current: 3,
+# total: {
+#   size: 1000,
+#   pages: 10
+# }
+# }
+# \`\`\`
+type Page {
+    # The pagination parameter sent in the query
+    first: Int!
+    # The pagination parameter sent in the query
+    skip: Int!
+    # The convertion from 'first' and 'after' in terms of the current page
+    # (e.g. { first: 100, after: 200 } -> current: 3).
+    current: Int!
+    # Inspect the total size of your dataset ignoring pagination.
+    total: DatasetSize
+}
+
+# ### DatasetSize - Pagination Metadata
+# Used in the Page object to describe the total number of pages available.
+type DatasetSize {
+    size: Int!
+    pages: Int!
+}`
+
+describe('index', () => 
+  describe('#transpileSchema: COMPLEX COMMENTS', () => 
+    it('Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
+      const output = transpileSchema(schema_input_cdwbqjf24cden76532);
+      const answer = compressString(output);
+      const correct = compressString(schema_output_cdwbqjf24cden76532);
       assert.equal(answer,correct);
     })));
 
@@ -398,4 +496,3 @@ describe('index', () =>
       assert.equal(!typeMeta3Prop2.details.metadata.body, true);
       assert.equal(typeMeta3Prop2.details.metadata.name, 'boris');
     })));
-

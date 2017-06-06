@@ -9,21 +9,19 @@ const _ = require('lodash');
 const { chain, log, escapeGraphQlSchema } = require('./src/utilities');
 const { extractGraphMetadata, removeGraphMetadata } = require('./src/graphmetadata');
 
-const blockRegEx = /{(.*?)}/;
 const genericTypeRegEx = /<(.*?)>/;
 const typeNameRegEx = /type\s(.*?){/;
-const typeRegex = /type\s(.*?){(.*?)}/mg;
+const typeRegex = /type\s(.*?){(.*?)_cr_([^#]*?)}/mg;
 const inputNameRegEx = /input\s(.*?){/;
-const inputRegex = /input\s(.*?){(.*?)}/mg;
+const inputRegex = /input\s(.*?){(.*?)_cr_([^#]*?)}/mg;
 const enumNameRegEx = /enum\s(.*?){/;
-const enumRegex = /enum\s(.*?){(.*?)}/mg;
+const enumRegex = /enum\s(.*?){(.*?)_cr_([^#]*?)}/mg;
 const interfaceNameRegEx = /interface\s(.*?){/;
-const interfaceRegex = /interface\s(.*?){(.*?)}/mg;
+const interfaceRegex = /interface\s(.*?){(.*?)_cr_([^#]*?)}/mg;
 const abstractNameRegEx = /abstract\s(.*?){/;
-const abstractRegex = /abstract\s(.*?){(.*?)}/mg;
+const abstractRegex = /abstract\s(.*?){(.*?)_cr_([^#]*?)}/mg;
 const inheritsRegex = /inherits\s(.*?)\s/mg;
 const implementsRegex = /implements\s(.*?)\{/mg;
-const commentsRegex = /#(.*?){/mg;
 const propertyParamsRegEx = /\((.*?)\)/;
 
 const carrReturnEsc = '_cr_';
@@ -34,9 +32,9 @@ const escapeGraphQlSchemaPlus = (sch, cr, t) => s || (() => { s = escapeGraphQlS
 
 const getSchemaBits = (sch) => _.flatten(_.toArray(_([typeRegex, inputRegex, enumRegex, interfaceRegex, abstractRegex])
 	.map(rx => _.toArray(_(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(rx)).map(str => {
-		const blockMatch = str.match(blockRegEx);
+		const blockMatch = str.match(/{(.*?)_cr_([^#]*?)}/);
 		if (!blockMatch) throw new Error(`Schema error: Missing block`);
-		const block = _.toArray(_(blockMatch[1].replace(/_t_/g, '').split(carrReturnEsc).map(x => x.trim())).filter(x => x != ''));
+		const block = _.toArray(_(blockMatch[0].replace(/_t_/g, '').replace(/^{/,'').replace(/}$/,'').split(carrReturnEsc).map(x => x.trim())).filter(x => x != ''));
 		const property = str.split(carrReturnEsc).join(' ').split(tabEsc).join(' ').replace(/ +(?= )/g,'');
 		return { property, block };
 	})))));
@@ -49,11 +47,13 @@ const getSchemaEntity = firstLine =>
 	{ type: null, name: null };
 
 const getCommentsBits = (sch) => _.toArray(
-	_((escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(commentsRegex) || []).map(c => {
+	_(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(/#(.*?)_cr_([^#]*?)({|:)/g) || [])
+	.filter(x => x.match(/{$/))
+	.map(c => {
 		const parts = _(c.split(carrReturnEsc).map(l => l.replace(/_t_/g, '    ').trim())).filter(x => x != '');
 		const hashCount = parts.reduce((a,b) => a + (b.indexOf('#') == 0 ? 1 : 0), 0);
 		return { text: parts.initial(), property: getSchemaEntity(parts.last()), comments: hashCount == parts.size() - 1 };
-	}))
+	})
 	.filter(x => x.comments).map(x => ({ text: x.text.join('\n'), property: x.property }))
 );
 
@@ -337,17 +337,3 @@ module.exports = {
 		.val(),
 	extractGraphMetadata: extractGraphMetadata
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
