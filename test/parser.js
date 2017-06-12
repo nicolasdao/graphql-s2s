@@ -8,7 +8,7 @@
 const _ = require('lodash');
 const { inspect } = require('util');
 const assert = require('assert');
-const { getSchemaParts, transpileSchema, extractGraphMetadata } = require('../index');
+const { getSchemaAST, transpileSchema, extractGraphMetadata } = require('../index');
 
 const compressString = s => s.replace(/[\n\r]+/g, '').replace(/[\t\r]+/g, '').replace(/ /g,'');
 
@@ -329,9 +329,9 @@ input PostUserRating {
 `
 
 describe('index', () => 
-  describe('#getSchemaParts: BASICS', () => 
+  describe('#getSchemaAST: BASICS', () => 
     it('Should extract all types and their properties including their respective comments.', () => {
-      const schemaParts = getSchemaParts(schema_input_aprck8);
+      const schemaParts = getSchemaAST(schema_input_aprck8);
       //console.log(schemaParts);
       assert.ok(schemaParts, 'schemaParts should exist.');
       assert.equal(schemaParts.length, 2);
@@ -399,9 +399,9 @@ type User {
 `
 
 describe('index', () => 
-  describe('#getSchemaParts: GENERIC TYPES', () => 
+  describe('#getSchemaAST: GENERIC TYPES', () => 
     it('Should create new types for each instance of a generic type.', () => {
-      const schemaParts = getSchemaParts(schema_input_pxbdksb204h);
+      const schemaParts = getSchemaAST(schema_input_pxbdksb204h);
 
       assert.ok(schemaParts);
       assert.equal(schemaParts.length, 4);
@@ -430,9 +430,9 @@ type Post inherits Node {
 `
 
 describe('index', () => 
-  describe('#getSchemaParts: INHERITED METADATA', () => 
+  describe('#getSchemaAST: INHERITED METADATA', () => 
     it('Should add properties from the super type to the sub type.', () => {
-      const schemaParts = getSchemaParts(schema_input_dfewcsad356);
+      const schemaParts = getSchemaAST(schema_input_dfewcsad356);
 
       assert.ok(schemaParts);
       assert.equal(schemaParts.length, 3);

@@ -326,7 +326,7 @@ const resetMemory = () => {
 }
 
 module.exports = {
-	getSchemaParts: (graphQlSchema) => chain(resetMemory())
+	getSchemaAST: (graphQlSchema) => chain(resetMemory())
 		.next(v => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
 		.next(metadata => getSchemaParts(metadata.stdSchema, metadata.metadata, true))
 		.next(v => { resetMemory(); return v; })
