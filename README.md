@@ -440,7 +440,7 @@ const executableSchema = makeExecutableSchema({
 ### Metadata Decoration
 Define your own custom metadata and decorate your GraphQL schema with new types of data. Let's imagine we want to explicitely add metadata about the type of relations between nodes, we could write something like this:
 ```js
-const { getSchemaParts } = require('graphql-s2s');
+const { getSchemaAST } = require('graphql-s2s');
 const schema = `
 @node
 type User {
@@ -449,7 +449,7 @@ type User {
 }
 `
 
-const schemaObjects = getSchemaParts(schema);
+const schemaObjects = getSchemaAST(schema);
 
 // -> schemaObjects
 //
