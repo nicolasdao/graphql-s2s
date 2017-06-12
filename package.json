@@ -1,6 +1,6 @@
 {
   "name": "graphql-s2s",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Transpile an enriched GraphQL string schema (e.g. support for metadata, inheritance, generic types, ...) into the standard string schema understood by graphql.js and the Apollo server client.",
   "main": "index.js",
   "scripts": {
