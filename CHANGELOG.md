@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.1.2"></a>
+## [0.1.2](https://github.com/nicolasdao/graphql-s2s/compare/v0.1.1...v0.1.2) (2017-06-13)
+
+
+### Bug Fixes
+
+* Fix lint issues ([4b9d69d](https://github.com/nicolasdao/graphql-s2s/commit/4b9d69d))
+* Lint all code ([d744392](https://github.com/nicolasdao/graphql-s2s/commit/d744392))
+
+
+
 <a name="0.1.1"></a>
 ## [0.1.1](https://github.com/nicolasdao/graphql-s2s/compare/v0.0.9...v0.1.1) (2017-06-12)
 
