@@ -10,13 +10,21 @@
 [4]: https://travis-ci.org/nicolasdao/graphql-s2s
 
 ## Install
+#### node
 ```js
 npm install 'graphql-s2s' --save
 ```
+#### browser
+After installing the _graphql-s2s_ npm package, you can reference it as follow in your HTML page:
+```html
+<script src="./node_modules/graphql-s2s/lib/graphqls2s.min.js"></script>
+```
+The API will be accessible through the __*graphqls2s*__ object.
 
 ## Usage
 ```js
-const { transpileSchema } = require('graphql-s2s');
+const graphqls2s = require('graphql-s2s');
+const { transpileSchema } = graphqls2s;
 const { makeExecutableSchema } = require('graphql-tools');
 
 const schema = `
@@ -190,7 +198,8 @@ type Student inherits Person {
 __*Full code example*__
 
 ```js
-const { transpileSchema } = require('graphql-s2s');
+const graphqls2s = require('graphql-s2s');
+const { transpileSchema } = graphqls2s;
 const { makeExecutableSchema } = require('graphql-tools');
 const { students, teachers } = require('./dummydata.json');
 
@@ -371,7 +380,8 @@ type PagedQuestion {
 __*Full code example*__
 
 ```js
-const { transpileSchema } = require('graphql-s2s');
+const graphqls2s = require('graphql-s2s');
+const { transpileSchema } = graphqls2s;
 const { makeExecutableSchema } = require('graphql-tools');
 const { students, teachers } = require('./dummydata.json');
 
@@ -440,7 +450,8 @@ const executableSchema = makeExecutableSchema({
 ### Metadata Decoration
 Define your own custom metadata and decorate your GraphQL schema with new types of data. Let's imagine we want to explicitely add metadata about the type of relations between nodes, we could write something like this:
 ```js
-const { getSchemaAST } = require('graphql-s2s');
+const graphqls2s = require('graphql-s2s');
+const { getSchemaAST } = graphqls2s;
 const schema = `
 @node
 type User {

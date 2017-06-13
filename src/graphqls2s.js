@@ -6,8 +6,8 @@
  * LICENSE file in the root directory of this source tree.
 */
 const _ = require('lodash')
-const { chain, log, escapeGraphQlSchema } = require('./src/utilities')
-const { extractGraphMetadata, removeGraphMetadata } = require('./src/graphmetadata')
+const { chain, log, escapeGraphQlSchema } = require('./utilities')
+const { extractGraphMetadata, removeGraphMetadata } = require('./graphmetadata')
 
 const genericTypeRegEx = /<(.*?)>/
 const typeNameRegEx = /type\s(.*?){/
@@ -325,7 +325,7 @@ const resetMemory = () => {
 	return 1
 }
 
-module.exports = {
+const graphqls2s = {
 	getSchemaAST: (graphQlSchema) => chain(resetMemory())
 		.next(() => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
 		.next(metadata => getSchemaParts(metadata.stdSchema, metadata.metadata, true))
@@ -337,3 +337,8 @@ module.exports = {
 		.val(),
 	extractGraphMetadata: extractGraphMetadata
 }
+
+if (typeof(window) != 'undefined') window.graphqls2s = graphqls2s
+
+module.exports.graphqls2s = graphqls2s
+
