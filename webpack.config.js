@@ -16,10 +16,7 @@ const { plugins, outputfile } = env == "build"
 
 module.exports = {
     entry: [
-        // Set up an ES6-ish environment
-        'babel-polyfill',
-        // Add your application's scripts below
-        './src/graphqls2s.js',
+        './src/graphqls2s.js'
     ],
     output: {
         path: __dirname + '/lib',
