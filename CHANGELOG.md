@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.2.0"></a>
+# [0.2.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.1.2...v0.2.0) (2017-06-13)
+
+
+### Features
+
+* Convert project to ES5 so it can run in the browser. Using webpack, eslint and babel + adding support for browser testing ([4bfbb77](https://github.com/nicolasdao/graphql-s2s/commit/4bfbb77))
+
+
+
 <a name="0.1.2"></a>
 ## [0.1.2](https://github.com/nicolasdao/graphql-s2s/compare/v0.1.1...v0.1.2) (2017-06-13)
 
