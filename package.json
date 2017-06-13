@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "release": "standard-version"
+    "release": "standard-version",
+    "eslint": "eslint index.js"
   },
   "repository": {
     "type": "git",
@@ -34,6 +35,7 @@
     "lodash": "^4.17.4"
   },
   "devDependencies": {
+    "eslint": "^4.0.0",
     "mocha": "^3.4.2",
     "standard-version": "^4.0.0"
   }
