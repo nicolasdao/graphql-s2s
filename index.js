@@ -33,7 +33,7 @@ const escapeGraphQlSchemaPlus = (sch, cr, t) => s || (() => { s = escapeGraphQlS
 const getSchemaBits = (sch) => _.flatten(_.toArray(_([typeRegex, inputRegex, enumRegex, interfaceRegex, abstractRegex])
 	.map(rx => _.toArray(_(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(rx)).map(str => {
 		const blockMatch = str.match(/{(.*?)_cr_([^#]*?)}/)
-		if (!blockMatch) throw new Error('Schema error: Missing block')
+		if (!blockMatch) { const msg = 'Schema error: Missing block'; log(msg); throw new Error(msg)}
 		const block = _.toArray(_(blockMatch[0].replace(/_t_/g, '').replace(/^{/,'').replace(/}$/,'').split(carrReturnEsc).map(x => x.trim())).filter(x => x != ''))
 		const property = str.split(carrReturnEsc).join(' ').split(tabEsc).join(' ').replace(/ +(?= )/g,'')
 		return { property, block }
@@ -272,7 +272,7 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 		const concreteType = (originName.match(/<(.*?)>/) || [null, null])[1]
 		if (!concreteType) throw new Error(`Schema error: Cannot find generic type in object ${originName}`)
 		const baseGenObj = schemaBreakDown.find(x => x.name.indexOf(genObjName) == 0)
-		if (!baseGenObj) throw new Error(`Schema error: Cannot find any definition for generic type starting with ${baseGenObjName}`)
+		if (!baseGenObj) throw new Error(`Schema error: Cannot find any definition for generic type starting with ${genObjName}`)
 		if (!baseGenObj.genericType) throw new Error(`Schema error: Schema object ${baseGenObj.name} is not generic!`)
 
 		const blockProps = baseGenObj.blockProps.map(prop => isTypeGeneric(prop.details.result.name, baseGenObj.genericType)
@@ -303,7 +303,7 @@ const buildSchemaString = schemaObjs => _(schemaObjs)
 	.map(obj => parseSchemaObjToString(obj.comments, obj.type, obj.name, obj.implements, obj.blockProps))
 	.join('\n') + 
 	_(memoizedGenericSchemaObjects)
-	.map((value, key) => createNewSchemaObjectFromGeneric(value, schemaObjs).stringObj)
+	.map(value => createNewSchemaObjectFromGeneric(value, schemaObjs).stringObj)
 	.join('\n')
 
 const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(_([getInterfaces, getAbstracts, getTypes, getInputs, getEnums]
@@ -312,7 +312,7 @@ const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(_(
 		.map(obj => getObjWithExtensions(obj, firstSchemaBreakDown))
 		.map(obj => addComments(obj, getCommentsBits(graphQlSchema)))))
 	.next(v => includeNewGenTypes 
-		? v.concat(_.toArray(_(memoizedGenericSchemaObjects).map((value, key) => createNewSchemaObjectFromGeneric(value, v).obj)))
+		? v.concat(_.toArray(_(memoizedGenericSchemaObjects).map(value => createNewSchemaObjectFromGeneric(value, v).obj)))
 		: v)
 	.val()
 
@@ -327,12 +327,12 @@ const resetMemory = () => {
 
 module.exports = {
 	getSchemaAST: (graphQlSchema) => chain(resetMemory())
-		.next(v => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
+		.next(() => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
 		.next(metadata => getSchemaParts(metadata.stdSchema, metadata.metadata, true))
 		.next(v => { resetMemory(); return v })
 		.val(),
 	transpileSchema: (graphQlSchema) => chain(resetMemory())
-		.next(v => buildSchemaString(getSchemaParts(removeGraphMetadata(graphQlSchema))))
+		.next(() => buildSchemaString(getSchemaParts(removeGraphMetadata(graphQlSchema))))
 		.next(v => { resetMemory(); return v })
 		.val(),
 	extractGraphMetadata: extractGraphMetadata

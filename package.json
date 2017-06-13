@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha",
     "release": "standard-version",
-    "eslint": "eslint index.js"
+    "eslint": "eslint index.js ./src/*.js"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,20 @@
     "neap"
   ],
   "author": "Nicolas Dao",
+  "contributors": [{
+      "name": "Nicolas Dao",
+      "email": "nic@neap.co",
+      "url": "https://github.com/nicolasdao"
+    },{
+      "name": "Brendan Johnson",
+      "email": "brendan@neap.co",
+      "url": "https://github.com/BrendanJohnson"
+    },{
+      "name": "Boris Berak",
+      "email": "boris@neap.co",
+      "url": "https://github.com/bberak"
+    }
+  ],
   "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/nicolasdao/graphql-s2s/issues"
