@@ -24,7 +24,6 @@ It is also possible to embed it after installing the _graphql-s2s_ npm package:
 ```html
 <script src="./node_modules/graphql-s2s/lib/graphqls2s.min.js"></script>
 ```
-The API will be accessible through the __*graphqls2s*__ object.
 
 ## Usage
 ```js
@@ -137,9 +136,9 @@ type Student inherits Node {
 `
 ```
 
-The enriched schema provides a richer and more compact notation. The transpiler converts the enriched schema into the standard expected by [graphql.js](https://github.com/graphql/graphql-js) (using the _buildSchema_ method) as well as the [Apollo Server](https://github.com/apollographql/graphql-tools).
+The enriched schema provides a richer and more compact notation. The transpiler converts the enriched schema into the standard expected by [graphql.js](https://github.com/graphql/graphql-js) (using the _buildSchema_ method) as well as the [Apollo Server](https://github.com/apollographql/graphql-tools). For more details on how to extract those extra information from the string schema, use the method _getSchemaAST_ (example in section [_Metadata Decoration_](#metadata-decoration)). 
 
-_Metadata_ can be added to decorate the schema types and properties. Add whatever you want as long as it starts with _@_ and start hacking your schema. The original intent of that feature was to decoration the schema with metadata _@node_ and _@edge_ so we coould add metadata about the nature of the relations between types.
+_Metadata_ can be added to decorate the schema types and properties. Add whatever you want as long as it starts with _@_ and start hacking your schema. The original intent of that feature was to decorate the schema with metadata _@node_ and _@edge_ so we could add metadata about the nature of the relations between types.
 
 ## Examples
 _WARNING: the following examples will be based on '[graphql-tools](https://github.com/apollographql/graphql-tools)' from the Apollo team, but the string schema could also be used with the 'buildSchema' method from graphql.js_
@@ -471,34 +470,46 @@ type User {
 const schemaObjects = getSchemaAST(schema);
 
 // -> schemaObjects
-//
-// [ { type: 'TYPE',
-//     name: 'User',
-//     metadata:
-//      { name: 'node',
-//        body: '',
-//        schemaType: 'TYPE',
-//        schemaName: 'User',
-//        parent: null },
-//     genericType: null,
-//     blockProps: [ { 	comments: '',
-//					    details: {
-//							name: 'posts',
-//					       	metadata: { 
-//								name: 'edge',
-//								body: '(\'<-[CREATEDBY]-\')',
-//								schemaType: 'PROPERTY',
-//								schemaName: 'posts: [Post]',
-//								parent: { 
-//									type: 'TYPE',
-//									name: 'User',
-//									metadata: { type: 'TYPE', name: 'node' } } },
-//					       	params: null,
-//					       	result: { originName: '[Post]', isGen: false, name: '[Post]' } },
-//					    value: 'posts: [Post]' } ],
-//     inherits: null,
-//     implements: null,
-//     comments: undefined } ]
+//	{ 
+//		"type": "TYPE", 
+//		"name": "User", 
+//		"metadata": { 
+//			"name": "node", 
+//			"body": "", 
+//			"schemaType": "TYPE", 
+//			"schemaName": "User", "parent": null 
+//		}, 
+//		"genericType": null, 
+//		"blockProps": [{ 
+//			"comments": "", 
+//			"details": { 
+//				"name": "posts", 
+//				"metadata": { 
+//					"name": "edge", 
+//					"body": "(\'<-[CREATEDBY]-\')", 
+//					"schemaType": "PROPERTY", 
+//					"schemaName": "posts: [Post]", 
+//					"parent": { 
+//						"type": "TYPE", 
+//						"name": "User", 
+//						"metadata": { 
+//							"type": "TYPE", 
+//							"name": "node" 
+//						} 
+//					} 
+//				}, 
+//				"params": null, 
+//				"result": { 
+//					"originName": "[Post]", 
+//					"isGen": false, 
+//					"name": "[Post]" 
+//				} 
+//			}, 
+//			"value": "posts: [Post]" 
+//		}], 
+//		"inherits": null, 
+//		"implements": null 
+//	}
 ```
 
 
