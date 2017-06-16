@@ -15,7 +15,12 @@
 npm install 'graphql-s2s' --save
 ```
 #### browser
-After installing the _graphql-s2s_ npm package, you can reference it as follow in your HTML page:
+```html
+<script src="https://neapjs.firebaseapp.com/graphqls2s/0.2.1/graphqls2s.min.js"></script>
+```
+The API will be accessible through the __*graphqls2s*__ object.
+
+It is also possible to embed it after installing the _graphql-s2s_ npm package:
 ```html
 <script src="./node_modules/graphql-s2s/lib/graphqls2s.min.js"></script>
 ```
@@ -63,6 +68,9 @@ const executableSchema = makeExecutableSchema({
 
 ## What It Does
 GraphQL S2S enriches the standard GraphQL Schema string used by both [graphql.js](https://github.com/graphql/graphql-js) and the [Apollo Server](https://github.com/apollographql/graphql-tools). The enriched schema supports:
+* [**Type Inheritance**](#type-inheritance)
+* [**Generic Types**](#generic-types)
+* [**Metadata Decoration**](#metadata-decoration)
 
 [**Type Inheritance**](#type-inheritance)
 ```js
