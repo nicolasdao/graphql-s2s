@@ -5,8 +5,9 @@
   "main": "./lib/graphqls2s.min.js",
   "scripts": {
     "test": "mocha ./test/node/*.js",
+    "test:dev": "MOCHA_ENV=dev mocha ./test/node/*.js",
     "release": "standard-version",
-    "eslint": "eslint graphqls2s.js ./src/*.js",
+    "eslint": "eslint graphqls2s.js src/ test/",
     "build": "WEBPACK_ENV=build webpack",
     "dev": "WEBPACK_ENV=dev webpack"
   },

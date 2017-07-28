@@ -57,7 +57,12 @@ const getCommentsBits = (sch) => _.toArray(
 	.filter(x => x.comments).map(x => ({ text: x.text.join('\n'), property: x.property }))
 )
 
-const genericNameAlias = genName => chain(genName.match(genericTypeRegEx)).next(m => m 
+/**
+ * Gets the alias for a generic type (e.g. Paged<Product> -> PagedProduct)
+ * @param  {String} genName e.g. Paged<Product>
+ * @return {String}         e.g. PagedProduct
+ */
+const genericDefaultNameAlias = genName => chain(genName.match(genericTypeRegEx)).next(m => m 
 	? chain(genName.split(m[0])).next(parts => `${parts[0]}${m[1].split(',').map(x => x.trim()).join('')}`).val()
 	: genName).val()
 
@@ -78,8 +83,25 @@ const replaceGenericWithType = (genericType, genericLetter, concreteType) =>
 	)
 	.val()
 
+let memoizedGenericNameAliases = {}
+const getAliasName = (genericType, metadata) => memoizedGenericNameAliases[genericType] || chain(genericType.match(/.*</)[0])
+	.next(genericStart => getAllAliases(metadata).find(x => x.schemaName.indexOf(genericStart) == 0))
+	.next(aliasObj => {
+		const alias = aliasObj && aliasObj.body ? getGenericAlias(aliasObj.body)(genericType) : genericDefaultNameAlias(genericType)
+		memoizedGenericNameAliases[genericType] = alias
+		return alias
+	})
+	.val()
+
+let memoizedAliases = null
+const getAllAliases = metadata => memoizedAliases || chain((metadata || []).filter(x => x.name == 'alias')).next(aliases => {
+	memoizedAliases = aliases
+	return aliases
+}).val()
+
 let memoizedGenericSchemaObjects = {}
-const getTypeDetails = t => chain(({ originName: t, isGen: t.indexOf('<') > 0, name: genericNameAlias(t) }))
+const getTypeDetails = (t, metadata) => chain(t.indexOf('<') > 0)
+	.next(isGen => ({ originName: t, isGen, name: isGen ? getAliasName(t, metadata) : t }))
 	.next(result => {
 		if (result.isGen && !memoizedGenericSchemaObjects[result.name])
 			memoizedGenericSchemaObjects[result.name] = result
@@ -134,9 +156,9 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
 			const paramsMatch  = prop.match(propertyParamsRegEx)
 			const propDetails = paramsMatch 
 				? chain(prop.split(paramsMatch[0]))
-					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: paramsMatch[1], result: getTypeDetails((parts[1] || '').replace(':', '').trim()) })).val()
+					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: paramsMatch[1], result: getTypeDetails((parts[1] || '').replace(':', '').trim(), metadata) })).val()
 				: chain(prop.split(':'))
-					.next(parts => ({ name: parts[0], metadata: mData, params: null, result: getTypeDetails((parts[1] || '').trim()) })).val()
+					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: null, result: getTypeDetails((parts[1] || '').trim(), metadata) })).val()
 			a.props.push({ 
 				comments: a.comments.join('\n    '), 
 				details: propDetails,
@@ -157,8 +179,8 @@ const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 		const nameMatch = typeDef.match(nameRegEx)
 		if (!nameMatch) throw new Error(`Schema error: ${typeName} with missing name.`)
 		const name = nameMatch[1].trim().split(' ')[0]
-		const typeMatch = name.match(genericTypeRegEx)
-		const type = typeMatch ? typeMatch[1] : null
+		const genericTypeMatch = name.match(genericTypeRegEx)
+		const isGenericType = genericTypeMatch ? genericTypeMatch[1] : null
 		const inheritsMatch = typeDef.match(inheritsRegex)
 		const superClass = inheritsMatch 
 			? inheritsMatch[0].replace('inherits ', '').replace(',', '').trim()
@@ -174,8 +196,21 @@ const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 			: null 
 
 		const baseObj = { type: objectType, name: name }
-		return { type: objectType, name: name, metadata: metadat, genericType: type, blockProps: getBlockProperties(d.block, baseObj, metadata), inherits: superClass, implements: _interface  }
+		return { 
+			type: objectType, 
+			name: name, 
+			metadata: metadat, 
+			genericType: isGenericType, 
+			blockProps: getBlockProperties(d.block, baseObj, metadata), 
+			inherits: superClass, 
+			implements: _interface  
+		}
 	}))
+
+const getGenericAlias = s => !s ? genericDefaultNameAlias :
+genName => chain(genName.match(genericTypeRegEx)).next(m => m 
+	? chain(m[1].split(',').map(x => `"${x.trim()}"`).join(',')).next(genericTypeName => eval(s + '(' + genericTypeName + ')')).val()
+	: genName).val()
 
 const getInterfaces = (definitions, metadata) => getSchemaObject(definitions, 'interface', interfaceNameRegEx, metadata)
 
@@ -200,7 +235,10 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 		const superClassWithInheritance = getObjWithExtensions(superClass, schemaObjects)
 
 		const objWithInheritance = { 
-			type: obj.type, name: obj.name, genericType: obj.genericType, originalBlockProps: obj.blockProps, 
+			type: obj.type, 
+			name: obj.name, 
+			genericType: obj.genericType, 
+			originalBlockProps: obj.blockProps, 
 			metadata: obj.metadata || superClassWithInheritance.metadata || null,
 			implements: _.toArray(_.uniq(_.concat(obj.implements, superClassWithInheritance.implements).filter(x => x))),
 			inherits: superClassWithInheritance,
@@ -218,7 +256,11 @@ const getObjWithInterfaces = (obj, schemaObjects) => {
 	if (obj && schemaObjects && obj.implements && obj.implements.length > 0) {
 		const interfaceWithAncestors = _.toArray(_.uniq(_.flatten(_.concat(obj.implements.map(i => getInterfaceWithAncestors(i, schemaObjects))))))
 		return { 
-			type: obj.type, name: obj.name, genericType: obj.genericType, originalBlockProps: obj.blockProps, 
+			type: obj.type, 
+			name: obj.name, 
+			genericType: obj.genericType, 
+			originalBlockProps: obj.blockProps, 
+			metadata: obj.metadata,
 			implements: interfaceWithAncestors,
 			inherits: obj.inherits,
 			blockProps: obj.blockProps
@@ -291,7 +333,14 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 			: prop)
 		const newSchemaObjStr = parseSchemaObjToString(baseGenObj.comments, baseGenObj.type, name, baseGenObj.implements, blockProps)
 		return { 
-			obj: { comments: baseGenObj.comments, type: baseGenObj.type, name: name, implements: baseGenObj.implements, blockProps: blockProps, genericType: null },
+			obj: { 
+				comments: baseGenObj.comments, 
+				type: baseGenObj.type, 
+				name: name, 
+				implements: baseGenObj.implements, 
+				blockProps: blockProps, 
+				genericType: null 
+			},
 			stringObj: newSchemaObjStr
 		}
 	}
@@ -306,8 +355,9 @@ const buildSchemaString = schemaObjs => _(schemaObjs)
 	.map(value => createNewSchemaObjectFromGeneric(value, schemaObjs).stringObj)
 	.join('\n')
 
-const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(_([getInterfaces, getAbstracts, getTypes, getInputs, getEnums]
-		.reduce((objects, getObjects) => objects.concat(getObjects(getSchemaBits(graphQlSchema), metadata)), [])))
+const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(getSchemaBits(graphQlSchema))
+	.next(schemaBits => _([getInterfaces, getAbstracts, getTypes, getInputs, getEnums]
+		.reduce((objects, getObjects) => objects.concat(getObjects(schemaBits, metadata)), [])))
 	.next(firstSchemaBreakDown => _.toArray(firstSchemaBreakDown
 		.map(obj => getObjWithExtensions(obj, firstSchemaBreakDown))
 		.map(obj => addComments(obj, getCommentsBits(graphQlSchema)))))
@@ -322,20 +372,24 @@ const resetMemory = () => {
 	memoizedExtendedObject = {}
 	memoizedInterfaceWithAncestors = {}
 	memoizedNewSchemaObjectFromGeneric = {}
+	memoizedGenericNameAliases = {}
+	memoizedAliases = null
 	return 1
 }
 
-const graphqls2s = {
+let graphqls2s = {
 	getSchemaAST: (graphQlSchema) => chain(resetMemory())
 		.next(() => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
-		.next(metadata => getSchemaParts(metadata.stdSchema, metadata.metadata, true))
+		.next(data => getSchemaParts(data.stdSchema, data.metadata, true))
 		.next(v => { resetMemory(); return v })
 		.val(),
 	transpileSchema: (graphQlSchema) => chain(resetMemory())
-		.next(() => buildSchemaString(getSchemaParts(removeGraphMetadata(graphQlSchema))))
+		.next(() => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
+		.next(data => buildSchemaString(getSchemaParts(data.stdSchema, data.metadata)))
 		.next(v => { resetMemory(); return v })
 		.val(),
-	extractGraphMetadata: extractGraphMetadata
+	extractGraphMetadata,
+	getGenericAlias
 }
 
 if (typeof(window) != 'undefined') window.graphqls2s = graphqls2s
