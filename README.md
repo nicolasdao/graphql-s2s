@@ -15,11 +15,15 @@
 npm install 'graphql-s2s' --save
 ```
 #### browser
-After installing the _graphql-s2s_ npm package, you can reference it as follow in your HTML page:
+```html
+<script src="https://neapjs.firebaseapp.com/graphqls2s/0.2.1/graphqls2s.min.js"></script>
+```
+The API will be accessible through the __*graphqls2s*__ object.
+
+It is also possible to embed it after installing the _graphql-s2s_ npm package:
 ```html
 <script src="./node_modules/graphql-s2s/lib/graphqls2s.min.js"></script>
 ```
-The API will be accessible through the __*graphqls2s*__ object.
 
 ## Usage
 ```js
@@ -63,6 +67,9 @@ const executableSchema = makeExecutableSchema({
 
 ## What It Does
 GraphQL S2S enriches the standard GraphQL Schema string used by both [graphql.js](https://github.com/graphql/graphql-js) and the [Apollo Server](https://github.com/apollographql/graphql-tools). The enriched schema supports:
+* [**Type Inheritance**](#type-inheritance)
+* [**Generic Types**](#generic-types)
+* [**Metadata Decoration**](#metadata-decoration)
 
 [**Type Inheritance**](#type-inheritance)
 ```js
@@ -129,9 +136,9 @@ type Student inherits Node {
 `
 ```
 
-The enriched schema provides a richer and more compact notation. The transpiler converts the enriched schema into the standard expected by [graphql.js](https://github.com/graphql/graphql-js) (using the _buildSchema_ method) as well as the [Apollo Server](https://github.com/apollographql/graphql-tools).
+The enriched schema provides a richer and more compact notation. The transpiler converts the enriched schema into the standard expected by [graphql.js](https://github.com/graphql/graphql-js) (using the _buildSchema_ method) as well as the [Apollo Server](https://github.com/apollographql/graphql-tools). For more details on how to extract those extra information from the string schema, use the method _getSchemaAST_ (example in section [_Metadata Decoration_](#metadata-decoration)). 
 
-_Metadata_ can be added to decorate the schema types and properties. Add whatever you want as long as it starts with _@_ and start hacking your schema. The original intent of that feature was to decoration the schema with metadata _@node_ and _@edge_ so we coould add metadata about the nature of the relations between types.
+_Metadata_ can be added to decorate the schema types and properties. Add whatever you want as long as it starts with _@_ and start hacking your schema. The original intent of that feature was to decorate the schema with metadata _@node_ and _@edge_ so we could add metadata about the nature of the relations between types.
 
 ## Examples
 _WARNING: the following examples will be based on '[graphql-tools](https://github.com/apollographql/graphql-tools)' from the Apollo team, but the string schema could also be used with the 'buildSchema' method from graphql.js_
@@ -463,36 +470,68 @@ type User {
 const schemaObjects = getSchemaAST(schema);
 
 // -> schemaObjects
-//
-// [ { type: 'TYPE',
-//     name: 'User',
-//     metadata:
-//      { name: 'node',
-//        body: '',
-//        schemaType: 'TYPE',
-//        schemaName: 'User',
-//        parent: null },
-//     genericType: null,
-//     blockProps: [ { 	comments: '',
-//					    details: {
-//							name: 'posts',
-//					       	metadata: { 
-//								name: 'edge',
-//								body: '(\'<-[CREATEDBY]-\')',
-//								schemaType: 'PROPERTY',
-//								schemaName: 'posts: [Post]',
-//								parent: { 
-//									type: 'TYPE',
-//									name: 'User',
-//									metadata: { type: 'TYPE', name: 'node' } } },
-//					       	params: null,
-//					       	result: { originName: '[Post]', isGen: false, name: '[Post]' } },
-//					    value: 'posts: [Post]' } ],
-//     inherits: null,
-//     implements: null,
-//     comments: undefined } ]
+//	{ 
+//		"type": "TYPE", 
+//		"name": "User", 
+//		"metadata": { 
+//			"name": "node", 
+//			"body": "", 
+//			"schemaType": "TYPE", 
+//			"schemaName": "User", "parent": null 
+//		}, 
+//		"genericType": null, 
+//		"blockProps": [{ 
+//			"comments": "", 
+//			"details": { 
+//				"name": "posts", 
+//				"metadata": { 
+//					"name": "edge", 
+//					"body": "(\'<-[CREATEDBY]-\')", 
+//					"schemaType": "PROPERTY", 
+//					"schemaName": "posts: [Post]", 
+//					"parent": { 
+//						"type": "TYPE", 
+//						"name": "User", 
+//						"metadata": { 
+//							"type": "TYPE", 
+//							"name": "node" 
+//						} 
+//					} 
+//				}, 
+//				"params": null, 
+//				"result": { 
+//					"originName": "[Post]", 
+//					"isGen": false, 
+//					"name": "[Post]" 
+//				} 
+//			}, 
+//			"value": "posts: [Post]" 
+//		}], 
+//		"inherits": null, 
+//		"implements": null 
+//	}
 ```
 
 
 ## This Is What We re Up To
 We are Neap, an Australian Technology consultancy powering the startup ecosystem in Sydney. We simply love building Tech and also meeting new people, so don't hesitate to connect with us at [https://neap.co](https://neap.co).
+
+## License
+Copyright (c) 2017, Neap Pty Ltd.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+* Neither the name of Neap Pty Ltd nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL NEAP PTY LTD BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
