@@ -16,7 +16,7 @@ npm install 'graphql-s2s' --save
 ```
 #### browser
 ```html
-<script src="https://neapjs.firebaseapp.com/graphqls2s/0.2.1/graphqls2s.min.js"></script>
+<script src="https://neapjs.firebaseapp.com/graphqls2s/0.3.1/graphqls2s.min.js"></script>
 ```
 The API will be accessible through the __*graphqls2s*__ object.
 
