@@ -23,14 +23,23 @@ const extractGraphMetadata = (schema = '') => {
 	const escSchema = escapeGraphQlSchema(schema, carrReturnEsc, tabEsc).replace(/_t_/g, ' ')
 	const attrMatches = escSchema.match(/@(.*?)(_cr_)(.*?)({|_cr_)/mg)
 	const graphQlMetadata = chain(_(attrMatches).map(m => chain(m.split(carrReturnEsc)).next(parts => {
-		if (parts.length < 2) throw new Error(`Schema error: Misused metadata attribute in '${parts.join(' ')}.'`)
+		if (parts.length < 2) 
+			throw new Error(`Schema error: Misused metadata attribute in '${parts.join(' ')}.'`)
+		
 		const typeMatch = `${parts[0].trim()} `.match(/@(.*?)(\s|{|\(|\[)/)
-		if (!typeMatch) {const msg = `Schema error: Impossible to extract type from metadata attribute ${parts[0]}`; log(msg); throw new Error(msg)}
+		if (!typeMatch) {
+			const msg = `Schema error: Impossible to extract type from metadata attribute ${parts[0]}`
+			log(msg)
+			throw new Error(msg)
+		}
+
 		const attrName = typeMatch[1].trim()
 		const attrBody = parts[0].replace(`@${attrName}`, '').trim()
+
 		const { schemaType, value } = chain(removeMultiSpaces(parts[1].trim())).next(t => t.match(/^(type\s|input\s|enum\s|interface\s)/)
 			? chain(t.split(' ')).next(bits => ({ schemaType: bits[0].toUpperCase(), value: bits[1].replace(/ /g, '').replace(/{$/, '') })).val()
 			: { schemaType: 'PROPERTY', value: t }).val()
+
 		const parent = schemaType == 'PROPERTY' 
 			? chain(escSchema.split(m).join('___replace___')).next(s => matchLeftNonGreedy(s, '(type |input |enum |interface )', '___replace___'))
 				.next(m2 => {

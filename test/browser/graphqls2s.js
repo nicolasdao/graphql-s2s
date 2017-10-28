@@ -58,6 +58,7 @@ var runtest = function(s2s, assert) {
     # to a post.
     rating: PostRating!
   }`
+
   var schema_output_vndfis = `
   # This is some description of 
   # what a Post object is.
@@ -80,6 +81,48 @@ var runtest = function(s2s, assert) {
         var output = transpileSchema(schema_input_vndfis)
         var answer = compressString(output)
         var correct = compressString(schema_output_vndfis)
+        assert.equal(answer,correct)
+      })))
+
+  var schema_input_vnwdvs = `
+  type Query {
+    bars: [Bar]!
+  }
+  type Bar {
+    id: ID
+  }
+  type Foo {
+    id: String!
+  }
+  extend    type Query {
+    foos: [Foo]!
+  }`
+  
+  var schema_output_vnwdvs = `
+  type Query {
+    bars: [Bar]!
+  }
+  type Bar {
+    id: ID
+  }
+  type Foo {
+    id: String!
+  }
+  extend type Query {
+    foos: [Foo]!
+  }`
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    // This was added on the 28th of Oct following a reported bug that the 'extend' keyword was erased after the transpiled operation.
+    // Ref: 
+    // - Name: The keyword "extend" is lost #1
+    // - Raised by: kaihaase-wd 
+    describe('#transpileSchema: SUPPORT THE EXTEND KEYWORD', () => 
+      it(`Should support extending schema using the 'extend' keyword.`, () => {
+        var output = transpileSchema(schema_input_vnwdvs)
+        var answer = compressString(output)
+        var correct = compressString(schema_output_vnwdvs)
         assert.equal(answer,correct)
       })))
 

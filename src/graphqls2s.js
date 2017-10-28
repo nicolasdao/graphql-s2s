@@ -11,15 +11,10 @@ const { extractGraphMetadata, removeGraphMetadata } = require('./graphmetadata')
 
 const genericTypeRegEx = /<(.*?)>/
 const typeNameRegEx = /type\s(.*?){/
-const typeRegex = /type\s(.*?){(.*?)_cr_([^#]*?)}/mg
 const inputNameRegEx = /input\s(.*?){/
-const inputRegex = /input\s(.*?){(.*?)_cr_([^#]*?)}/mg
 const enumNameRegEx = /enum\s(.*?){/
-const enumRegex = /enum\s(.*?){(.*?)_cr_([^#]*?)}/mg
 const interfaceNameRegEx = /interface\s(.*?){/
-const interfaceRegex = /interface\s(.*?){(.*?)_cr_([^#]*?)}/mg
 const abstractNameRegEx = /abstract\s(.*?){/
-const abstractRegex = /abstract\s(.*?){(.*?)_cr_([^#]*?)}/mg
 const inheritsRegex = /inherits\s(.*?)\s/mg
 const implementsRegex = /implements\s(.*?)\{/mg
 const propertyParamsRegEx = /\((.*?)\)/
@@ -30,13 +25,40 @@ const tabEsc = '_t_'
 let s = null
 const escapeGraphQlSchemaPlus = (sch, cr, t) => s || (() => { s = escapeGraphQlSchema(sch, cr, t); return s })()
 
-const getSchemaBits = (sch) => _.flatten(_.toArray(_([typeRegex, inputRegex, enumRegex, interfaceRegex, abstractRegex])
+/**
+ * Gets a first rough break down of the string schema
+ * @param  {String} sch Original GraphQl Schema
+ * @return {Array}      Using regex, the interfaces, types, inputs, enums and abstracts entities are isolated 
+ *                      e.g. [{ 
+ *                      		property: 'type Query { bars: [Bar]! }', 
+ *                      		block: [ 'bars: [Bar]!' ],
+ *                      		extend: false
+ *                      	},{ 
+ *                      		property: 'type Bar { id: ID }', 
+ *                      		block: [ 'id: ID' ],
+ *                      		extend: false
+ *                      	}]
+ */
+const typeRegex = /(extend type|type)\s(.*?){(.*?)_cr_([^#]*?)}/mg
+const inputRegex = /(extend input|input)\s(.*?){(.*?)_cr_([^#]*?)}/mg
+const enumRegex = /enum\s(.*?){(.*?)_cr_([^#]*?)}/mg
+const interfaceRegex = /(extend interface|interface)\s(.*?){(.*?)_cr_([^#]*?)}/mg
+const abstractRegex = /(extend abstract|abstract)\s(.*?){(.*?)_cr_([^#]*?)}/mg
+const getSchemaBits = (sch='') => _.flatten(_.toArray(_([typeRegex, inputRegex, enumRegex, interfaceRegex, abstractRegex])
 	.map(rx => _.toArray(_(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(rx)).map(str => {
 		const blockMatch = str.match(/{(.*?)_cr_([^#]*?)}/)
-		if (!blockMatch) { const msg = 'Schema error: Missing block'; log(msg); throw new Error(msg)}
+		if (!blockMatch) { 
+			const msg = 'Schema error: Missing block'
+			log(msg)
+			throw new Error(msg)
+		}
+
 		const block = _.toArray(_(blockMatch[0].replace(/_t_/g, '').replace(/^{/,'').replace(/}$/,'').split(carrReturnEsc).map(x => x.trim())).filter(x => x != ''))
-		const property = str.split(carrReturnEsc).join(' ').split(tabEsc).join(' ').replace(/ +(?= )/g,'')
-		return { property, block }
+		const rawProperty = str.split(carrReturnEsc).join(' ').split(tabEsc).join(' ').replace(/ +(?= )/g,'').trim()
+		const { property, extend } = rawProperty.indexOf('extend') == 0 
+			? { property: rawProperty.replace('extend ', ''), extend: true }
+			: { property: rawProperty, extend: false }
+		return { property, block, extend }
 	})))))
 
 const getSchemaEntity = firstLine => 
@@ -170,6 +192,33 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
 	}, { comments:[], props:[] }).props)
 	.val()
 
+/**
+ * [description]
+ * @param  {Array} 	definitions Array of objects ({ property:..., block: [...], extend: ... }) coming from the 'getSchemaBits' function
+ * @param  {String} typeName    e.g. 'type' or 'input'
+ * @param  {RegExp} nameRegEx   Regex that can extract the specific details of the schema bit (i.e. definitions)
+ * @param  {Array} 	metadata    metadata coming from the 'extractGraphMetadata' method.
+ * @return {Array}             	Array of objects: Example: 
+ *                              [{ 
+ *                              	type: 'TYPE',
+ *                              	extend: false,
+ *                              	name: 'Foo',
+ *                              	metadata: null,
+ *                              	genericType: null,
+ *                              	blockProps: [ { comments: '', details: [Object], value: 'id: String!' } ],
+ *                              	inherits: null,
+ *                              	implements: null },
+ *                              { 
+ *                              	type: 'TYPE',
+ *                              	extend: true,
+ *                              	name: 'Query',
+ *                              	metadata: null,
+ *                              	genericType: null,
+ *                              	blockProps: [ { comments: '', details: [Object], value: 'foos: [Foo]!' } ],
+ *                              	inherits: null,
+ *                              	implements: null 
+ *                              }]
+ */
 const getSchemaObject = (definitions, typeName, nameRegEx, metadata) => 
 	_.toArray(_(definitions).filter(d => d.property.indexOf(typeName) == 0)
 	.map(d => {
@@ -196,8 +245,9 @@ const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 			: null 
 
 		const baseObj = { type: objectType, name: name }
-		return { 
+		const result = { 
 			type: objectType, 
+			extend: d.extend,
 			name: name, 
 			metadata: metadat, 
 			genericType: isGenericType, 
@@ -205,6 +255,7 @@ const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 			inherits: superClass, 
 			implements: _interface  
 		}
+		return result
 	}))
 
 const getGenericAlias = s => !s ? genericDefaultNameAlias :
@@ -293,9 +344,10 @@ const addComments = (obj, comments) => {
 	return obj
 }
 
-const parseSchemaObjToString = (comments, type, name, _implements, blockProps) => [
+const parseSchemaObjToString = (comments, type, name, _implements, blockProps, extend=false) => 
+	[
 		`${comments && comments != '' ? `\n${comments}` : ''}`, 
-		`${type.toLowerCase()} ${name}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} { `,
+		`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} { `,
 		blockProps.map(prop => `    ${prop.comments != '' ? `${prop.comments}\n    ` : ''}${prop.value}`).join('\n'),
 		'}'
 	].join('\n')
@@ -349,7 +401,7 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 
 const buildSchemaString = schemaObjs => _(schemaObjs)
 	.filter(x => !x.genericType && x.type != 'ABSTRACT')
-	.map(obj => parseSchemaObjToString(obj.comments, obj.type, obj.name, obj.implements, obj.blockProps))
+	.map(obj => parseSchemaObjToString(obj.comments, obj.type, obj.name, obj.implements, obj.blockProps, obj.extend))
 	.join('\n') + 
 	_(memoizedGenericSchemaObjects)
 	.map(value => createNewSchemaObjectFromGeneric(value, schemaObjs).stringObj)
@@ -378,12 +430,12 @@ const resetMemory = () => {
 }
 
 let graphqls2s = {
-	getSchemaAST: (graphQlSchema) => chain(resetMemory())
+	getSchemaAST: graphQlSchema => chain(resetMemory())
 		.next(() => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
 		.next(data => getSchemaParts(data.stdSchema, data.metadata, true))
 		.next(v => { resetMemory(); return v })
 		.val(),
-	transpileSchema: (graphQlSchema) => chain(resetMemory())
+	transpileSchema: graphQlSchema => chain(resetMemory())
 		.next(() => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
 		.next(data => buildSchemaString(getSchemaParts(data.stdSchema, data.metadata)))
 		.next(v => { resetMemory(); return v })
