@@ -14,7 +14,7 @@
 > * [Install](#install)
 > * [How To Use It](#how-to-use-it)
 > * [Examples](#examples)
-> * [Contributes](#contributes)
+> * [Contribute](#contribute)
 
 # What It Does
 GraphQL S2S enriches the standard GraphQL Schema string used by both [graphql.js](https://github.com/graphql/graphql-js) and the [Apollo Server](https://github.com/apollographql/graphql-tools). The enriched schema supports:
@@ -518,7 +518,7 @@ const schemaObjects = getSchemaAST(schema);
 //		"implements": null 
 //	}
 ```
-# Contributes
+# Contribute
 This project is built using Javascript ES6. Each version is also transpiled to ES5 using Babel through Webpack 2, so this project can run in the browser. In order to write unit test only once instead of duplicating it for each version of Javascript, the all unit tests have been written using Javascript ES5 in mocha. That means that if you want to test the project after some changes, you will need to first transpile the project to ES5. This can be done simply by running the following command:
 
 ```
