@@ -454,9 +454,10 @@ scalar Like
 scalar Like
 
   union Product = Bicycle | Racket
+union Details    =     PriceDetails | RacketDetails     
 
   # This is some description of 
-  # what a Post object is plus an attemp to fool the scalar type.
+  # what a Post object is plus an attemp to fool the union type.
   type Post {
     id: ID! 
     # A name is a property.
@@ -477,7 +478,7 @@ scalar Like
 
   var schema_output_fdwfcds95d = `
   # This is some description of 
-  # what a Post object is plus an attemp to fool the scalar type.
+  # what a Post object is plus an attemp to fool the union type.
   type Post {
     id: ID! 
     # A name is a property.
@@ -494,18 +495,18 @@ scalar Like
     rating: Strength!
   }
 
-  union Product = Bicycle | Racket
 
   scalar Date
   scalar Like
-  scalar Strength`
+  scalar Strength
+  union Product = Bicycle | Racket
+  union Details = PriceDetails | RacketDetails`
 
   /*eslint-disable */
   describe('graphqls2s', () => 
     describe('#transpileSchema: SUPPORT FOR UNION', () => 
       it('Should support union types.', () => {
         var output = transpileSchema(schema_input_fdwfcds95d)
-        console.log(output)
         var answer = compressString(output)
         var correct = compressString(schema_output_fdwfcds95d)
         assert.equal(answer,correct)

@@ -53,18 +53,25 @@ const enumRegex = { regex: /enum\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'enum' }
 const interfaceRegex = { regex: /(extend interface|interface)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'interface' }
 const abstractRegex = { regex: /(extend abstract|abstract)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'abstract' }
 const scalarRegex = { regex: /(.{1}|.{0})scalar\s(.*?)([^\s]*?)(?![a-zA-Z0-9])/mg, type: 'scalar' }
+const unionRegex = { regex: /(.{1}|.{0})union([^\n]*?)\n/gm, type: 'union' }
 const getSchemaBits = (sch='') => {
 	const escapedSchemaWithComments = escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc)
-	const escapedSchemaWithoutComments = escapeGraphQlSchemaPlus(sch.replace(/#(.*?)\n/g, ''), carrReturnEsc, tabEsc)
-	return _.flatten([typeRegex, inputRegex, enumRegex, interfaceRegex, abstractRegex, scalarRegex]
+	// We append '\n' to help isolating the 'union'
+	const schemaWithoutComments = ' ' + sch.replace(/#(.*?)\n/g, '') + '\n' 
+	const escapedSchemaWithoutComments = escapeGraphQlSchemaPlus(schemaWithoutComments, carrReturnEsc, tabEsc)
+	return _.flatten([typeRegex, inputRegex, enumRegex, interfaceRegex, abstractRegex, scalarRegex, unionRegex]
 	.map(rx => 
-		chain((rx.type == 'scalar' ? escapedSchemaWithoutComments : escapedSchemaWithComments).match(rx.regex) || [])
+		chain((
+			rx.type == 'scalar' ? escapedSchemaWithoutComments : 
+			rx.type == 'union' ? schemaWithoutComments : 
+			escapedSchemaWithComments).match(rx.regex) || [])
 		.next(regexMatches => 
-			rx.type == 'scalar' 
-			? regexMatches.filter(m => m.indexOf('scalar') == 0 || m.match(/^(?![a-zA-Z0-9])/))
-			: regexMatches)
+			rx.type == 'scalar' ? regexMatches.filter(m => m.indexOf('scalar') == 0 || m.match(/^(?![a-zA-Z0-9])/)) :
+			rx.type == 'union' ? regexMatches.filter(m => m.indexOf('union') == 0 || m.match(/^(?![a-zA-Z0-9])/)) : regexMatches)
 		.next(regexMatches => {
-			const transform = rx.type == 'scalar' ? breakdownScalarBit : breakdownSchemabBit
+			const transform = 
+				rx.type == 'scalar' ? breakdownScalarBit : 
+				rx.type == 'union' ? breakdownUnionBit : breakdownSchemabBit
 			return regexMatches.map(str => transform(str))
 		})
 		.val()))
@@ -88,7 +95,12 @@ const breakdownSchemabBit = str => {
 
 const breakdownScalarBit = str => {
 	const block = (str.split(' ').slice(-1) || [])[0]
-	return { property: `scalar ${block}`, block: block, extend: false, scalar: true }
+	return { property: `scalar ${block}`, block: block, extend: false }
+}
+
+const breakdownUnionBit = str => {
+	const block = str.replace(/(^union\s|\sunion\s|\n)/g, '').trim()
+	return { property: `union ${block}`, block: block, extend: false }
 }
 
 const getSchemaEntity = firstLine => 
@@ -263,6 +275,17 @@ const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 				inherits: null, 
 				implements: null  
 			}
+		else if (typeName == 'union') 
+			return {
+				type: 'UNION', 
+				extend: false,
+				name: d.block, 
+				metadata: null, 
+				genericType: false, 
+				blockProps: [], 
+				inherits: null, 
+				implements: null  
+			}
 		else {
 			const typeDefMatch = d.property.match(/(.*?){/)
 			if (!typeDefMatch || typeDefMatch[0].indexOf('#') >= 0) throw new Error(`Schema error: Syntax error in '${d.property}'. Cannot any find schema type definition.`)
@@ -317,6 +340,8 @@ const getInputs = (definitions, metadata) => getSchemaObject(definitions, 'input
 const getEnums = (definitions, metadata) => getSchemaObject(definitions, 'enum', enumNameRegEx, metadata)
 
 const getScalars = (definitions, metadata) => getSchemaObject(definitions, 'scalar', null, metadata)
+
+const getUnions = (definitions, metadata) => getSchemaObject(definitions, 'union', null, metadata)
 
 let memoizedExtendedObject = {}
 const getObjWithExtensions = (obj, schemaObjects) => {
@@ -453,7 +478,7 @@ const buildSchemaString = schemaObjs => _(schemaObjs)
 	.join('\n')
 
 const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(getSchemaBits(graphQlSchema))
-	.next(schemaBits => _([getInterfaces, getAbstracts, getTypes, getInputs, getEnums, getScalars]
+	.next(schemaBits => _([getInterfaces, getAbstracts, getTypes, getInputs, getEnums, getScalars, getUnions]
 		.reduce((objects, getObjects) => objects.concat(getObjects(schemaBits, metadata)), [])))
 	.next(firstSchemaBreakDown => _.toArray(firstSchemaBreakDown
 		.map(obj => getObjWithExtensions(obj, firstSchemaBreakDown))
