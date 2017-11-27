@@ -9,12 +9,25 @@
 [3]: https://travis-ci.org/nicolasdao/graphql-s2s.svg?branch=master
 [4]: https://travis-ci.org/nicolasdao/graphql-s2s
 
-## Install
-#### node
+# Table Of Contents
+> * [What It Does](#what-it-does)
+> * [Install](#install)
+> * [How To Use It](#how-to-use-it)
+> * [Examples](#examples)
+> * [Contribute](#contribute)
+
+# What It Does
+GraphQL S2S enriches the standard GraphQL Schema string used by both [graphql.js](https://github.com/graphql/graphql-js) and the [Apollo Server](https://github.com/apollographql/graphql-tools). The enriched schema supports:
+* [**Type Inheritance**](#type-inheritance)
+* [**Generic Types**](#generic-types)
+* [**Metadata Decoration**](#metadata-decoration)
+
+# Install
+### node
 ```js
 npm install 'graphql-s2s' --save
 ```
-#### browser
+### browser
 ```html
 <script src="https://neapjs.firebaseapp.com/graphqls2s/0.3.1/graphqls2s.min.js"></script>
 ```
@@ -25,7 +38,7 @@ It is also possible to embed it after installing the _graphql-s2s_ npm package:
 <script src="./node_modules/graphql-s2s/lib/graphqls2s.min.js"></script>
 ```
 
-## Usage
+# How To Use It
 ```js
 const graphqls2s = require('graphql-s2s');
 const { transpileSchema } = graphqls2s;
@@ -64,12 +77,6 @@ const executableSchema = makeExecutableSchema({
   resolvers: resolver
 });
 ```
-
-## What It Does
-GraphQL S2S enriches the standard GraphQL Schema string used by both [graphql.js](https://github.com/graphql/graphql-js) and the [Apollo Server](https://github.com/apollographql/graphql-tools). The enriched schema supports:
-* [**Type Inheritance**](#type-inheritance)
-* [**Generic Types**](#generic-types)
-* [**Metadata Decoration**](#metadata-decoration)
 
 [**Type Inheritance**](#type-inheritance)
 ```js
@@ -140,7 +147,7 @@ The enriched schema provides a richer and more compact notation. The transpiler 
 
 _Metadata_ can be added to decorate the schema types and properties. Add whatever you want as long as it starts with _@_ and start hacking your schema. The original intent of that feature was to decorate the schema with metadata _@node_ and _@edge_ so we could add metadata about the nature of the relations between types.
 
-## Examples
+# Examples
 _WARNING: the following examples will be based on '[graphql-tools](https://github.com/apollographql/graphql-tools)' from the Apollo team, but the string schema could also be used with the 'buildSchema' method from graphql.js_
 
 ### Type Inheritance
@@ -511,12 +518,25 @@ const schemaObjects = getSchemaAST(schema);
 //		"implements": null 
 //	}
 ```
+# Contribute
+This project is built using Javascript ES6. Each version is also transpiled to ES5 using Babel through Webpack 2, so this project can run in the browser. In order to write unit test only once instead of duplicating it for each version of Javascript, the all unit tests have been written using Javascript ES5 in mocha. That means that if you want to test the project after some changes, you will need to first transpile the project to ES5. This can be done simply by running the following command:
 
+```
+npm run dev
+npm test
+```
 
-## This Is What We re Up To
+If you want to test the code without transpiling it, I've added a variant:
+
+```
+npm run test:dev
+```
+This sets an environment variable that configure the project to load the main dependency from the _src_ folder (source code in ES6) instead of the _lib_ folder (transpiled ES5 code).
+
+# This Is What We re Up To
 We are Neap, an Australian Technology consultancy powering the startup ecosystem in Sydney. We simply love building Tech and also meeting new people, so don't hesitate to connect with us at [https://neap.co](https://neap.co).
 
-## License
+# License
 Copyright (c) 2017, Neap Pty Ltd.
 All rights reserved.
 
