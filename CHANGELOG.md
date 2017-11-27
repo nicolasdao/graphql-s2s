@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.3.2"></a>
+## [0.3.2](https://github.com/nicolasdao/graphql-s2s/compare/v0.3.1...v0.3.2) (2017-11-27)
+
+
+### Bug Fixes
+
+* Add support for 'scalar' keyword ([351e2e5](https://github.com/nicolasdao/graphql-s2s/commit/351e2e5))
+* Add support for 'union' keyword ([e89358e](https://github.com/nicolasdao/graphql-s2s/commit/e89358e))
+* Compile ES6 to ES5 to add support for both 'scalar' and 'union' keywords ([3bb4992](https://github.com/nicolasdao/graphql-s2s/commit/3bb4992))
+
+
+
 <a name="0.3.1"></a>
 ## [0.3.1](https://github.com/nicolasdao/graphql-s2s/compare/v0.3.0...v0.3.1) (2017-10-28)
 
