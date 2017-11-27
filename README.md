@@ -531,7 +531,7 @@ If you want to test the code without transpiling it, I've added a variant:
 ```
 npm run test:dev
 ```
-This sets an environment variable that configure the project to load the main dependency from the _src_ folder (source code in ES6) instead of the _lib_ folder (transpiled ES5 code).
+This sets an environment variable that configure the project to load the main dependency from the _src_ folder (source code in ES6) instead of the _lib_ folder (transpiled ES5 code). 
 
 # This Is What We re Up To
 We are Neap, an Australian Technology consultancy powering the startup ecosystem in Sydney. We simply love building Tech and also meeting new people, so don't hesitate to connect with us at [https://neap.co](https://neap.co).
