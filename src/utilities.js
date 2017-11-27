@@ -12,6 +12,13 @@ const log = (msg, name) => {
         return msg
     }
 /*eslint-enable */
+/**
+ * Removes all multi-spaces with a single space + replace carriage returns with 'cr' and tabs with 't'
+ * @param  {String} sch Text input
+ * @param  {String} cr  Carriage return replacement
+ * @param  {String} t   Tab replacement
+ * @return {String}     Escaped text
+ */
 const escapeGraphQlSchema = (sch, cr, t) => sch.replace(/[\n\r]+/g, cr).replace(/[\t\r]+/g, t).replace(/\s+/g, ' ')
 const removeMultiSpaces = s => s.replace(/ +(?= )/g,'')
 const matchLeftNonGreedy = (str, startChar, endChar) => chain(str.match(new RegExp(`${startChar}(.*?)${endChar}`)))

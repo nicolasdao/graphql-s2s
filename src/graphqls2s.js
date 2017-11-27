@@ -22,11 +22,19 @@ const propertyParamsRegEx = /\((.*?)\)/
 const carrReturnEsc = '_cr_'
 const tabEsc = '_t_'
 
-let s = null
-const escapeGraphQlSchemaPlus = (sch, cr, t) => s || (() => { s = escapeGraphQlSchema(sch, cr, t); return s })()
+let _s = {}
+const escapeGraphQlSchemaPlus = (sch, cr, t) => {
+	if (!sch)
+		return sch
+
+	if (!_s[sch])
+		_s[sch] = escapeGraphQlSchema(sch, cr, t)
+
+	return _s[sch]
+}
 
 /**
- * Gets a first rough break down of the string schema
+ * Gets a first rough breakdown of the string schema
  * @param  {String} sch Original GraphQl Schema
  * @return {Array}      Using regex, the interfaces, types, inputs, enums and abstracts entities are isolated 
  *                      e.g. [{ 
@@ -39,27 +47,49 @@ const escapeGraphQlSchemaPlus = (sch, cr, t) => s || (() => { s = escapeGraphQlS
  *                      		extend: false
  *                      	}]
  */
-const typeRegex = /(extend type|type)\s(.*?){(.*?)_cr_([^#]*?)}/mg
-const inputRegex = /(extend input|input)\s(.*?){(.*?)_cr_([^#]*?)}/mg
-const enumRegex = /enum\s(.*?){(.*?)_cr_([^#]*?)}/mg
-const interfaceRegex = /(extend interface|interface)\s(.*?){(.*?)_cr_([^#]*?)}/mg
-const abstractRegex = /(extend abstract|abstract)\s(.*?){(.*?)_cr_([^#]*?)}/mg
-const getSchemaBits = (sch='') => _.flatten(_.toArray(_([typeRegex, inputRegex, enumRegex, interfaceRegex, abstractRegex])
-	.map(rx => _.toArray(_(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(rx)).map(str => {
-		const blockMatch = str.match(/{(.*?)_cr_([^#]*?)}/)
-		if (!blockMatch) { 
-			const msg = 'Schema error: Missing block'
-			log(msg)
-			throw new Error(msg)
-		}
+const typeRegex = { regex: /(extend type|type)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'type' }
+const inputRegex = { regex: /(extend input|input)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'input' }
+const enumRegex = { regex: /enum\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'enum' }
+const interfaceRegex = { regex: /(extend interface|interface)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'interface' }
+const abstractRegex = { regex: /(extend abstract|abstract)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'abstract' }
+const scalarRegex = { regex: /(.{1}|.{0})scalar\s(.*?)([^\s]*?)(?![a-zA-Z0-9])/mg, type: 'scalar' }
+const getSchemaBits = (sch='') => {
+	const escapedSchemaWithComments = escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc)
+	const escapedSchemaWithoutComments = escapeGraphQlSchemaPlus(sch.replace(/#(.*?)\n/g, ''), carrReturnEsc, tabEsc)
+	return _.flatten([typeRegex, inputRegex, enumRegex, interfaceRegex, abstractRegex, scalarRegex]
+	.map(rx => 
+		chain((rx.type == 'scalar' ? escapedSchemaWithoutComments : escapedSchemaWithComments).match(rx.regex) || [])
+		.next(regexMatches => 
+			rx.type == 'scalar' 
+			? regexMatches.filter(m => m.indexOf('scalar') == 0 || m.match(/^(?![a-zA-Z0-9])/))
+			: regexMatches)
+		.next(regexMatches => {
+			const transform = rx.type == 'scalar' ? breakdownScalarBit : breakdownSchemabBit
+			return regexMatches.map(str => transform(str))
+		})
+		.val()))
+}
 
-		const block = _.toArray(_(blockMatch[0].replace(/_t_/g, '').replace(/^{/,'').replace(/}$/,'').split(carrReturnEsc).map(x => x.trim())).filter(x => x != ''))
-		const rawProperty = str.split(carrReturnEsc).join(' ').split(tabEsc).join(' ').replace(/ +(?= )/g,'').trim()
-		const { property, extend } = rawProperty.indexOf('extend') == 0 
-			? { property: rawProperty.replace('extend ', ''), extend: true }
-			: { property: rawProperty, extend: false }
-		return { property, block, extend }
-	})))))
+const breakdownSchemabBit = str => {
+	const blockMatch = str.match(/{(.*?)_cr_([^#]*?)}/)
+	if (!blockMatch) { 
+		const msg = 'Schema error: Missing block'
+		log(msg)
+		throw new Error(msg)
+	}
+
+	const block = _.toArray(_(blockMatch[0].replace(/_t_/g, '').replace(/^{/,'').replace(/}$/,'').split(carrReturnEsc).map(x => x.trim())).filter(x => x != ''))
+	const rawProperty = str.split(carrReturnEsc).join(' ').split(tabEsc).join(' ').replace(/ +(?= )/g,'').trim()
+	const { property, extend } = rawProperty.indexOf('extend') == 0 
+		? { property: rawProperty.replace('extend ', ''), extend: true }
+		: { property: rawProperty, extend: false }
+	return { property, block, extend }
+}
+
+const breakdownScalarBit = str => {
+	const block = (str.split(' ').slice(-1) || [])[0]
+	return { property: `scalar ${block}`, block: block, extend: false, scalar: true }
+}
 
 const getSchemaEntity = firstLine => 
 	firstLine.indexOf('type') == 0 ? { type: 'TYPE', name: firstLine.replace('type', '').replace(/ /g, '').replace('{', '') } :
@@ -222,40 +252,53 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
 const getSchemaObject = (definitions, typeName, nameRegEx, metadata) => 
 	_.toArray(_(definitions).filter(d => d.property.indexOf(typeName) == 0)
 	.map(d => {
-		const typeDefMatch = d.property.match(/(.*?){/)
-		if (!typeDefMatch || typeDefMatch[0].indexOf('#') >= 0) throw new Error(`Schema error: Syntax error in '${d.property}'. Cannot any find schema type definition.`)
-		const typeDef = typeDefMatch[0]
-		const nameMatch = typeDef.match(nameRegEx)
-		if (!nameMatch) throw new Error(`Schema error: ${typeName} with missing name.`)
-		const name = nameMatch[1].trim().split(' ')[0]
-		const genericTypeMatch = name.match(genericTypeRegEx)
-		const isGenericType = genericTypeMatch ? genericTypeMatch[1] : null
-		const inheritsMatch = typeDef.match(inheritsRegex)
-		const superClass = inheritsMatch 
-			? inheritsMatch[0].replace('inherits ', '').replace(',', '').trim()
-			: null
-		const implementsMatch = typeDef.match(implementsRegex)
-		const _interface = implementsMatch 
-			? implementsMatch[0].replace('implements ', '').replace('{', '').split(',').map(x => x.trim().split(' ')[0]) 
-			: null
+		if (typeName == 'scalar') 
+			return {
+				type: 'SCALAR', 
+				extend: false,
+				name: d.block, 
+				metadata: null, 
+				genericType: false, 
+				blockProps: [], 
+				inherits: null, 
+				implements: null  
+			}
+		else {
+			const typeDefMatch = d.property.match(/(.*?){/)
+			if (!typeDefMatch || typeDefMatch[0].indexOf('#') >= 0) throw new Error(`Schema error: Syntax error in '${d.property}'. Cannot any find schema type definition.`)
+			const typeDef = typeDefMatch[0]
+			const nameMatch = typeDef.match(nameRegEx)
+			if (!nameMatch) throw new Error(`Schema error: ${typeName} with missing name.`)
+			const name = nameMatch[1].trim().split(' ')[0]
+			const genericTypeMatch = name.match(genericTypeRegEx)
+			const isGenericType = genericTypeMatch ? genericTypeMatch[1] : null
+			const inheritsMatch = typeDef.match(inheritsRegex)
+			const superClass = inheritsMatch 
+				? inheritsMatch[0].replace('inherits ', '').replace(',', '').trim()
+				: null
+			const implementsMatch = typeDef.match(implementsRegex)
+			const _interface = implementsMatch 
+				? implementsMatch[0].replace('implements ', '').replace('{', '').split(',').map(x => x.trim().split(' ')[0]) 
+				: null
 
-		const objectType = typeName.toUpperCase()
-		const metadat = metadata
-			? _(metadata).filter(m => m.schemaType == objectType && m.schemaName == name).first() || null
-			: null 
+			const objectType = typeName.toUpperCase()
+			const metadat = metadata
+				? _(metadata).filter(m => m.schemaType == objectType && m.schemaName == name).first() || null
+				: null 
 
-		const baseObj = { type: objectType, name: name }
-		const result = { 
-			type: objectType, 
-			extend: d.extend,
-			name: name, 
-			metadata: metadat, 
-			genericType: isGenericType, 
-			blockProps: getBlockProperties(d.block, baseObj, metadata), 
-			inherits: superClass, 
-			implements: _interface  
+			const baseObj = { type: objectType, name: name }
+			const result = { 
+				type: objectType, 
+				extend: d.extend,
+				name: name, 
+				metadata: metadat, 
+				genericType: isGenericType, 
+				blockProps: getBlockProperties(d.block, baseObj, metadata), 
+				inherits: superClass, 
+				implements: _interface  
+			}
+			return result
 		}
-		return result
 	}))
 
 const getGenericAlias = s => !s ? genericDefaultNameAlias :
@@ -272,6 +315,8 @@ const getTypes = (definitions, metadata) => getSchemaObject(definitions, 'type',
 const getInputs = (definitions, metadata) => getSchemaObject(definitions, 'input', inputNameRegEx, metadata)
 
 const getEnums = (definitions, metadata) => getSchemaObject(definitions, 'enum', enumNameRegEx, metadata)
+
+const getScalars = (definitions, metadata) => getSchemaObject(definitions, 'scalar', null, metadata)
 
 let memoizedExtendedObject = {}
 const getObjWithExtensions = (obj, schemaObjects) => {
@@ -347,10 +392,10 @@ const addComments = (obj, comments) => {
 const parseSchemaObjToString = (comments, type, name, _implements, blockProps, extend=false) => 
 	[
 		`${comments && comments != '' ? `\n${comments}` : ''}`, 
-		`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} { `,
+		`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} ${blockProps.some(x => x) ? '{': ''} `,
 		blockProps.map(prop => `    ${prop.comments != '' ? `${prop.comments}\n    ` : ''}${prop.value}`).join('\n'),
-		'}'
-	].join('\n')
+		blockProps.some(x => x) ? '}': ''
+	].filter(x => x).join('\n')
 
 const isTypeGeneric = (type, genericLetter) => 
 	!type || !genericLetter ? false :
@@ -408,7 +453,7 @@ const buildSchemaString = schemaObjs => _(schemaObjs)
 	.join('\n')
 
 const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(getSchemaBits(graphQlSchema))
-	.next(schemaBits => _([getInterfaces, getAbstracts, getTypes, getInputs, getEnums]
+	.next(schemaBits => _([getInterfaces, getAbstracts, getTypes, getInputs, getEnums, getScalars]
 		.reduce((objects, getObjects) => objects.concat(getObjects(schemaBits, metadata)), [])))
 	.next(firstSchemaBreakDown => _.toArray(firstSchemaBreakDown
 		.map(obj => getObjWithExtensions(obj, firstSchemaBreakDown))
@@ -419,7 +464,7 @@ const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(ge
 	.val()
 
 const resetMemory = () => {
-	s = null
+	_s = {}
 	memoizedGenericSchemaObjects = {}
 	memoizedExtendedObject = {}
 	memoizedInterfaceWithAncestors = {}

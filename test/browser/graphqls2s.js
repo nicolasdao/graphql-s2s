@@ -393,6 +393,124 @@ var runtest = function(s2s, assert) {
         assert.equal(answer,correct)
       })))
 
+  var schema_input_fdwkhj42 = `scalar Date
+scalar Like
+
+  # This is some description of 
+  # what a Post object is plus an attemp to fool the scalar type.
+  type Post {
+    id: ID! 
+    # A name is a property.
+    name: String!
+    creationDate: Date
+    likeRate: Like
+  }
+
+  scalar Strength
+
+  type Test { id: ID }
+
+  type PostUserRating {
+    # Rating indicates the rating a user gave 
+    # to a post. Fooling test: type Test { id: ID }
+    rating: Strength!
+  }`
+
+  var schema_output_fdwkhj42 = `
+  # This is some description of 
+  # what a Post object is plus an attemp to fool the scalar type.
+  type Post {
+    id: ID! 
+    # A name is a property.
+    name: String!
+    creationDate: Date
+    likeRate: Like
+  }
+
+  type Test { id: ID }
+
+  type PostUserRating {
+    # Rating indicates the rating a user gave 
+    # to a post. Fooling test: type Test { id: ID }
+    rating: Strength!
+  }
+
+
+  scalar Date
+  scalar Like
+  scalar Strength`
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#transpileSchema: SUPPORT FOR SCALAR', () => 
+      it('Should support custom scalar types.', () => {
+        var output = transpileSchema(schema_input_fdwkhj42)
+        var answer = compressString(output)
+        var correct = compressString(schema_output_fdwkhj42)
+        assert.equal(answer,correct)
+      })))
+
+  var schema_input_fdwfcds95d = `scalar Date
+scalar Like
+
+  union Product = Bicycle | Racket
+
+  # This is some description of 
+  # what a Post object is plus an attemp to fool the scalar type.
+  type Post {
+    id: ID! 
+    # A name is a property.
+    name: String!
+    creationDate: Date
+    likeRate: Like
+  }
+
+  scalar Strength
+
+  type Test { id: ID }
+
+  type PostUserRating {
+    # Rating indicates the rating a user gave 
+    # to a post. Fooling test: type Test { id: ID }
+    rating: Strength!
+  }`
+
+  var schema_output_fdwfcds95d = `
+  # This is some description of 
+  # what a Post object is plus an attemp to fool the scalar type.
+  type Post {
+    id: ID! 
+    # A name is a property.
+    name: String!
+    creationDate: Date
+    likeRate: Like
+  }
+
+  type Test { id: ID }
+
+  type PostUserRating {
+    # Rating indicates the rating a user gave 
+    # to a post. Fooling test: type Test { id: ID }
+    rating: Strength!
+  }
+
+  union Product = Bicycle | Racket
+
+  scalar Date
+  scalar Like
+  scalar Strength`
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#transpileSchema: SUPPORT FOR UNION', () => 
+      it('Should support union types.', () => {
+        var output = transpileSchema(schema_input_fdwfcds95d)
+        console.log(output)
+        var answer = compressString(output)
+        var correct = compressString(schema_output_fdwfcds95d)
+        assert.equal(answer,correct)
+      })))
+
   /*eslint-disable */
   describe('graphqls2s', () => 
     describe('#extractGraphMetadata: EXTRACT METADATA', () => 

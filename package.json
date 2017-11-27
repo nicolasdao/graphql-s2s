@@ -7,7 +7,7 @@
     "test": "mocha ./test/node/*.js",
     "test:dev": "MOCHA_ENV=dev mocha ./test/node/*.js",
     "release": "standard-version",
-    "eslint": "eslint graphqls2s.js src/ test/",
+    "eslint": "eslint graphqls2s.js src/ test/ --fix",
     "build": "WEBPACK_ENV=build webpack",
     "dev": "WEBPACK_ENV=dev webpack"
   },
