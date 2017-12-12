@@ -40,9 +40,8 @@ It is also possible to embed it after installing the _graphql-s2s_ npm package:
 
 # How To Use It
 ```js
-const graphqls2s = require('graphql-s2s');
-const { transpileSchema } = graphqls2s;
-const { makeExecutableSchema } = require('graphql-tools');
+const { transpileSchema } = require('graphql-s2s').graphqls2s
+const { makeExecutableSchema } = require('graphql-tools')
 
 const schema = `
 type Node {
@@ -67,7 +66,7 @@ const resolver = {
         Query: {
             students(root, args, context) {
             	// replace this dummy code with your own logic to extract students.
-                return [{ id: 1, firstname: "Carry", lastname: "Connor", nickname: "Cannie" }]; 
+                return [{ id: 1, firstname: "Carry", lastname: "Connor", nickname: "Cannie" }]
             }
         }
     };
@@ -75,7 +74,7 @@ const resolver = {
 const executableSchema = makeExecutableSchema({
   typeDefs: [transpileSchema(schema)],
   resolvers: resolver
-});
+})
 ```
 
 [**Type Inheritance**](#type-inheritance)
@@ -212,10 +211,9 @@ type Student inherits Person {
 __*Full code example*__
 
 ```js
-const graphqls2s = require('graphql-s2s');
-const { transpileSchema } = graphqls2s;
-const { makeExecutableSchema } = require('graphql-tools');
-const { students, teachers } = require('./dummydata.json');
+const { transpileSchema } = require('graphql-s2s').graphqls2s
+const { makeExecutableSchema } = require('graphql-tools')
+const { students, teachers } = require('./dummydata.json')
 
 const schema = `
 type Node {
@@ -259,19 +257,19 @@ type Query {
 const resolver = {
         Query: {
             students(root, args, context) {
-                return Promise.resolve(students);
+                return Promise.resolve(students)
             },
 
             teachers(root, args, context) {
-                return Promise.resolve(teachers);
+                return Promise.resolve(teachers)
             }
         }
-    };
+    }
 
 const executableSchema = makeExecutableSchema({
   typeDefs: [transpileSchema(schema)],
   resolvers: resolver
-});
+})
 ```
 
 ### Generic Types
@@ -394,10 +392,9 @@ type PagedQuestion {
 __*Full code example*__
 
 ```js
-const graphqls2s = require('graphql-s2s');
-const { transpileSchema } = graphqls2s;
-const { makeExecutableSchema } = require('graphql-tools');
-const { students, teachers } = require('./dummydata.json');
+const { transpileSchema } = require('graphql-s2s').graphqls2s
+const { makeExecutableSchema } = require('graphql-tools')
+const { students, teachers } = require('./dummydata.json')
 
 const schema = `
 type Paged<T> {
@@ -446,26 +443,25 @@ type Query {
 const resolver = {
         Query: {
             students(root, args, context) {
-                return Promise.resolve({ data: students.map(s => ({ __proto__:s, questions: { data: s.questions, cursor: null }})), cursor: null });
+                return Promise.resolve({ data: students.map(s => ({ __proto__:s, questions: { data: s.questions, cursor: null }})), cursor: null })
             },
 
             teachers(root, args, context) {
                 return Promise.resolve({ data: teachers, cursor: null });
             }
         }
-    };
+    }
 
 const executableSchema = makeExecutableSchema({
   typeDefs: [transpileSchema(schema)],
   resolvers: resolver
-});
+})
 ```
 
 ### Metadata Decoration
 Define your own custom metadata and decorate your GraphQL schema with new types of data. Let's imagine we want to explicitely add metadata about the type of relations between nodes, we could write something like this:
 ```js
-const graphqls2s = require('graphql-s2s');
-const { getSchemaAST } = graphqls2s;
+const { getSchemaAST } = require('graphql-s2s').graphqls2s
 const schema = `
 @node
 type User {
