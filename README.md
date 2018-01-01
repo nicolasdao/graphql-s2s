@@ -1,4 +1,4 @@
-<a href="https://neap.co" target="_blank"><img src="https://neap.co/img/neap_black_small_logo.png" alt="Neap Pty Ltd logo" title="Neap" align="right" height="50" width="120"/></a>
+<a href="https://neap.co" target="_blank"><img src="https://neap.co/img/neap_logo_built_with_love.png" alt="Neap Pty Ltd logo" title="Neap" height="113" width="240" style="float: right" align="right" /></a>
 
 
 # GraghQL Schema-2-Schema Transpiler
