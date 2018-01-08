@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.4.0"></a>
+# [0.4.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.3.3...v0.4.0) (2018-01-08)
+
+
+### Features
+
+* Add new 'getQueryAST' api whoch allows to inspect the current graphql request to extract metadata ([2163ecb](https://github.com/nicolasdao/graphql-s2s/commit/2163ecb))
+
+
+
 <a name="0.3.3"></a>
 ## [0.3.3](https://github.com/nicolasdao/graphql-s2s/compare/v0.3.2...v0.3.3) (2018-01-08)
 
