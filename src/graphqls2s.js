@@ -1,12 +1,12 @@
 /**
- * Copyright (c) 2017, Neap Pty Ltd.
+ * Copyright (c) 2018, Neap Pty Ltd.
  * All rights reserved.
  * 
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
 */
 const _ = require('lodash')
-const { chain, log, escapeGraphQlSchema } = require('./utilities')
+const { chain, log, escapeGraphQlSchema, getQueryAST } = require('./utilities')
 const { extractGraphMetadata, removeGraphMetadata } = require('./graphmetadata')
 
 const genericTypeRegEx = /<(.*?)>/
@@ -511,7 +511,8 @@ let graphqls2s = {
 		.next(v => { resetMemory(); return v })
 		.val(),
 	extractGraphMetadata,
-	getGenericAlias
+	getGenericAlias,
+	getQueryAST
 }
 
 if (typeof(window) != 'undefined') window.graphqls2s = graphqls2s

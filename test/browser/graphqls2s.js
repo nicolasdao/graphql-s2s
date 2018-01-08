@@ -16,6 +16,7 @@ var runtest = function(s2s, assert) {
   var transpileSchema = s2s.transpileSchema
   var extractGraphMetadata = s2s.extractGraphMetadata
   var getGenericAlias = s2s.getGenericAlias
+  var getQueryAST = s2s.getQueryAST
 
   /*eslint-disable */
   describe('graphqls2s', () => 
@@ -732,6 +733,80 @@ union Details    =     PriceDetails | RacketDetails
         assert.isOk(typeMeta3Prop2.details.metadata)
         assert.equal(!typeMeta3Prop2.details.metadata.body, true)
         assert.equal(typeMeta3Prop2.details.metadata.name, 'boris')
+      })))
+
+  var schema_input_dejwklccr429_iw = `
+  type User {
+    id: ID!
+    username: String!
+  }
+
+  type Query {
+    @auth
+    users: [User]
+  }
+
+  input UserInput {
+    name: String
+    kind: String
+  }
+
+  type Mutation {
+    @auth
+    insert(input: UserInput): User
+
+    @author
+    update(input: UserInput): User
+  }
+  `
+  var query_dejwklccr429_iw = `
+  query Hello($person: String, $animal: String) {
+    hello:users(where:{name:$person, kind: $animal}){
+      id
+      username
+    }
+    users{
+      id
+    }
+  }`
+
+  var mutation_dejwklccr429_iw = `
+  mutation Hello($person: String, $animal: String) {
+    hello:insert(input:{name:$person, kind: $animal}){
+      id
+      username
+    }
+    update(input: { name: "fred" }){
+      id
+    }
+  }`
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#getQueryAST: GET METADATA', () => 
+      it('Should retrieve all metadata associated to the query.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_input_dejwklccr429_iw)
+        var queryAST = getQueryAST(query_dejwklccr429_iw, schemaAST)
+        var mutationAST = getQueryAST(mutation_dejwklccr429_iw, schemaAST)
+
+        assert.isOk(queryAST, `An query AST should exist.`)
+        assert.equal(queryAST.length, 2, `There should be 2 AST found for the query.`)
+        assert.equal(queryAST[1].name, 'users',`The 2nd AST should be named 'users'.`)
+        assert.isOk(queryAST[1].metadata,`metadata should be defined on the 'users' query.`)
+        assert.equal(queryAST[1].metadata.name, 'auth',`There should be an 'auth' metadata on the 'users' query.`)
+        assert.equal(queryAST[0].name, 'hello:users',`The 1st AST should be named 'hello:users'.`)
+        assert.isOk(queryAST[0].metadata,`metadata should be defined on the 'users' query.`)
+        assert.equal(queryAST[0].metadata.name, 'auth',`There should be an 'auth' metadata on the 'users' query.`)
+
+        assert.isOk(mutationAST, `An mutation AST should exist.`)
+        assert.equal(mutationAST.length, 2, `There should be 2 AST found for the mutation.`)
+        assert.equal(mutationAST[0].name, 'hello:insert',`The 1st AST should be named 'hello:insert'.`)
+        assert.isOk(mutationAST[0].metadata,`metadata should be defined on the 'users' mutation.`)
+        assert.equal(mutationAST[0].metadata.name, 'auth',`There should be an 'auth' metadata on the 'users' mutation.`)
+        assert.equal(mutationAST[1].name, 'update',`The 2nd AST should be named 'update'.`)
+        assert.isOk(mutationAST[1].metadata,`metadata should be defined on the 'users' mutation.`)
+        assert.equal(mutationAST[1].metadata.name, 'author',`There should be an 'auth' metadata on the 'users' mutation.`)
       })))
 }
 
