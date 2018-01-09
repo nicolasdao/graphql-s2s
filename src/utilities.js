@@ -336,15 +336,19 @@ const getQueryOrMutationAST = (query, schemaAST, queryType='Query') =>
             .val())
         .val()
 
-const getQueryAST = (query='', schemaAST) => {
-    const queryType = chain(query.trim()).next(q => 
-            q.match(/^{|[q|Q]uery\s/) ? 'Query' : 
-            q.match(/^{|[m|M]utation\s/) ? 'Mutation' : null 
-        ).val()
-    if (!queryType)
-        throw new Error(`Invalid GraphQL query exception. Only Query and Mutation are currently supported. This query can't be parsed by 'graphqls2s': ${query}`)
-    
-    return getQueryOrMutationAST(query, schemaAST, queryType)
+const getQueryAST = (query, schemaAST) => {
+    if (query) {
+        const queryType = chain(query.trim()).next(q => 
+                q.match(/^{|[q|Q]uery\s/) ? 'Query' : 
+                q.match(/^{|[m|M]utation\s/) ? 'Mutation' : null 
+            ).val()
+        if (!queryType)
+            throw new Error(`Invalid GraphQL query exception. Only Query and Mutation are currently supported. This query can't be parsed by 'graphqls2s': ${query}`)
+        
+        return getQueryOrMutationAST(query, schemaAST, queryType)
+    }
+    else
+        return []
 }
 
 /**
