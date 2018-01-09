@@ -22,7 +22,7 @@ npm install 'graphql-s2s' --save
 ```html
 <script src="https://unpkg.com/graphql-s2s@0.4.1/lib/graphqls2s.min.js"></script>
 ```
-> Using the awesome [unpkg.com](https://unpkg.com), all versions are supported at ht<span>tp://</span>unpkg.com/graphql-s2s@__*:VERSION*__/lib/graphqls2s.min.js.
+> Using the awesome [unpkg.com](https://unpkg.com), all versions are supported at http&#58;//unpkg.com/graphql-s2s@__*:VERSION*__/lib/graphqls2s.min.js.
 The API will be accessible through the __*graphqls2s*__ object.
 
 It is also possible to embed it after installing the _graphql-s2s_ npm package:
