@@ -20,8 +20,9 @@ npm install 'graphql-s2s' --save
 ```
 ### browser
 ```html
-<script src="https://neapjs.firebaseapp.com/graphqls2s/0.3.1/graphqls2s.min.js"></script>
+<script src="https://unpkg.com/graphql-s2s@0.4.1/lib/graphqls2s.min.js"></script>
 ```
+> Using the awesome [unpkg.com](https://unpkg.com), all versions are supported at https://unpkg.com/graphql-s2s@__*:VERSION*__/lib/graphqls2s.min.js.
 The API will be accessible through the __*graphqls2s*__ object.
 
 It is also possible to embed it after installing the _graphql-s2s_ npm package:
