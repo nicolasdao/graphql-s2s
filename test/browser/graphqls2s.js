@@ -974,13 +974,143 @@ union Details    =     PriceDetails | RacketDetails
         var schemaAST = getSchemaAST(schema_input_dmqfwnd7_ehd1)
         var queryAST = getQueryAST(query_dmqfwnd7_ehd1, schemaAST)
 
-        const filteredQueryAST = queryAST.filter(a => !a.metadata || a.metadata.name != 'auth')
+        var filteredQueryAST = queryAST.filter(a => !a.metadata || a.metadata.name != 'auth')
         
         var query = normalizeString(query_filtered_dmqfwnd7_ehd1)
 
         var queryAnswer = normalizeString(buildQuery(filteredQueryAST))
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
+      })))
+
+  var schema_denjk6326hius_dew2h_ = `
+  type User {
+    id: ID!
+    username: String!
+  }
+
+  type Query {
+    @auth
+    users: [User]
+  }
+
+  input UserInput {
+    name: String
+    kind: String
+  }
+
+  type Mutation {
+    @auth
+    insert(input: UserInput): User
+
+    @author
+    update(input: UserInput): User
+  }
+  `
+
+  var query_denjk6326hius_dew2h_ = `
+  query IntrospectionQuery {
+    __schema {
+      queryType { name }
+      mutationType { name }
+      subscriptionType { name }
+      types {
+        ...FullType
+      }
+      directives {
+        name
+        description
+        locations
+        args {
+          ...InputValue
+        }
+      }
+    }
+  }
+
+  fragment FullType on __Type {
+    kind
+    name
+    description
+    fields(includeDeprecated: true) {
+      name
+      description
+      args {
+        ...InputValue
+      }
+      type {
+        ...TypeRef
+      }
+      isDeprecated
+      deprecationReason
+    }
+    inputFields {
+      ...InputValue
+    }
+    interfaces {
+      ...TypeRef
+    }
+    enumValues(includeDeprecated: true) {
+      name
+      description
+      isDeprecated
+      deprecationReason
+    }
+    possibleTypes {
+      ...TypeRef
+    }
+  }
+
+  fragment InputValue on __InputValue {
+    name
+    description
+    type { ...TypeRef }
+    defaultValue
+  }
+
+  fragment TypeRef on __Type {
+    kind
+    name
+    ofType {
+      kind
+      name
+      ofType {
+        kind
+        name
+        ofType {
+          kind
+          name
+          ofType {
+            kind
+            name
+            ofType {
+              kind
+              name
+              ofType {
+                kind
+                name
+                ofType {
+                  kind
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  `
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#getQueryAST: DEAL WITH SCHEMA DEFINITION QUERIES', () => 
+      it('Should not return any data for queries requesting schema informations.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_denjk6326hius_dew2h_)
+        var queryOpAST = getQueryAST(query_denjk6326hius_dew2h_, schemaAST)
+
+        assert.equal(queryOpAST.error, 'schema_data_not_supported')
       })))
 }
 

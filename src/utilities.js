@@ -170,9 +170,13 @@ const getQueryAST = (query, schemaAST) => {
             variables: ast.variableDefinitions ? ast.variableDefinitions.map(({ variable:v, type:t }) => ({ name: v.name.value, type: t.name.value })) : null,
             body: parseProperties(ast.selectionSet)
         }
-        let output = getQueryOrMutationAST(operation, schemaAST, _graphQlQueryTypes[ast.operation] )
-        Object.assign(output, { filter: fn => filterQueryAST(output, fn) })
-        return output
+        if (operation.body && operation.body.some(x => x.name == '__schema' || x.name == '__type'))
+            return { error: 'schema_data_not_supported', message: 'This version of graphql-s2s does not support analysing graphql queries about the schema itself.' }
+        else {
+            let output = getQueryOrMutationAST(operation, schemaAST, _graphQlQueryTypes[ast.operation] )
+            Object.assign(output, { filter: fn => filterQueryAST(output, fn) })
+            return output
+        }
     }
     else
         return null
