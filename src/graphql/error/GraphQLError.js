@@ -18,8 +18,8 @@ const { getLocation } = require('../location')
  */
 
 
-let GraphQLError = ( // eslint-disable-line no-redeclare
-message, nodes, source, positions, path, originalError, extensions) => {
+function GraphQLError( // eslint-disable-line no-redeclare
+message, nodes, source, positions, path, originalError, extensions) {
   // Compute list of blame nodes.
   var _nodes = Array.isArray(nodes) ? nodes.length !== 0 ? nodes : undefined : nodes ? [nodes] : undefined
 

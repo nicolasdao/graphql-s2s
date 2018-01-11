@@ -1104,13 +1104,150 @@ union Details    =     PriceDetails | RacketDetails
 
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getQueryAST: DEAL WITH SCHEMA DEFINITION QUERIES', () => 
-      it('Should not return any data for queries requesting schema informations.', () => {
+    describe('#buildQuery: FRAGMENTS #1', () => 
+      it('Should support queries with fragments.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_denjk6326hius_dew2h_)
         var queryOpAST = getQueryAST(query_denjk6326hius_dew2h_, schemaAST)
+        var rebuiltQuery = buildQuery(queryOpAST)
 
-        assert.equal(queryOpAST.error, 'schema_data_not_supported')
+        //console.log(rebuiltQuery)
+        //console.log(JSON.stringify(queryOpAST, null, '\t'))
+
+        var query = normalizeString(query_denjk6326hius_dew2h_)
+        var queryAnswer = normalizeString(rebuiltQuery)
+
+        assert.equal(queryAnswer, query, 'The rebuild query for the schema request should match the original with fragments.')
+
+        //assert.equal(queryOpAST.error, 'schema_data_not_supported')
+      })))
+
+  var schema_den23S1 = `
+  type User {
+    id: ID!
+    username: String!
+  }
+
+  type Query {
+    @auth
+    users: [User]
+  }
+
+  input UserInput {
+    name: String
+    kind: String
+  }
+
+  type Mutation {
+    @auth
+    insert(input: UserInput): User
+
+    @author
+    update(input: UserInput): User
+  }
+  `
+
+  var query_den23S1 = `
+  query IntrospectionQuery {
+    __schema {
+      queryType { name }
+      mutationType { name }
+      subscriptionType { name }
+      types {
+        ...FullType
+      }
+      directives {
+        name
+        description
+        locations
+        args {
+          ...InputValue
+        }
+      }
+    }
+  }
+
+  fragment FullType on __Type {
+    fields(includeDeprecated: true) {
+      name
+      description
+    }
+    inputFields {
+      ...InputValue
+    }
+    possibleTypes {
+      ...TypeRef
+    }
+  }
+
+  fragment InputValue on __InputValue {
+    name
+    type { ...TypeRef }
+  }
+
+  fragment TypeRef on __Type {
+    kind
+    name
+  }
+  `
+
+  var query_defragged_den23S1 = `
+  query IntrospectionQuery {
+    __schema {
+      queryType { name }
+      mutationType { name }
+      subscriptionType { name }
+      types {
+        fields(includeDeprecated: true) {
+          name
+          description
+        }
+        inputFields {
+          name
+          type {
+            kind
+            name
+          }
+        }
+        possibleTypes {
+          kind
+          name
+        }
+      }
+      directives {
+        name
+        description
+        locations
+        args {
+          name
+          type {
+            kind
+            name
+          }
+        }
+      }
+    }
+  }
+  `
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: FRAGMENTS #2', () => 
+      it('Should support merging fragments.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_den23S1)
+        var queryOpAST = getQueryAST(query_den23S1, schemaAST, { defrag: true })
+        var rebuiltQuery = buildQuery(queryOpAST)
+
+        //console.log(rebuiltQuery)
+        //console.log(JSON.stringify(queryOpAST, null, '\t'))
+
+        var query = normalizeString(query_defragged_den23S1)
+        var queryAnswer = normalizeString(rebuiltQuery)
+
+        assert.equal(queryAnswer, query, 'The rebuild query for the schema request should match the original with fragments.')
+
+        //assert.equal(queryOpAST.error, 'schema_data_not_supported')
       })))
 }
 

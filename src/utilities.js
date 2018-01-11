@@ -91,26 +91,39 @@ const removeAlias = (query='') => query.split(':').slice(-1).join('')
  */
 const getQueryFields = (queryProp, parentTypeAST, schemaAST) => 
     chain(parentTypeAST.blockProps.find(x => x.details.name == removeAlias(queryProp.name)))
-    .next(schemaProp => !schemaProp 
-        ?   throwError(true, `Error in method 'getQueryFields': Query function '${queryProp.name}' is not defined in the GraphQL schema (specifically in the 'parentTypeAST' argument).`)
-        :   { 
-            name: queryProp.name, 
-            type: schemaProp.details.result.name, 
-            metadata: schemaProp.details.metadata,
-            isNode: isNodeType(schemaProp.details.result.name, schemaAST),
-            edge: getEdgeDesc(schemaProp.details.metadata), 
-            args: queryProp.args,
-            properties: queryProp.properties && queryProp.properties.length > 0
-                ?   chain(schemaProp.details.result.name)
-                    .next(typename => (typename.match(/^\[(.*?)\]$/) || [null, typename])[1])
-                    .next(typename => schemaAST.find(x => x.type == 'TYPE' && x.name == typename))
-                    .next(parentTypeAST => parentTypeAST 
-                        ? queryProp.properties.map(queryProp => getQueryFields(queryProp, parentTypeAST, schemaAST))
-                        : throwError(true, `Error in method 'getQueryFields': Cannot find type '${schemaProp.details.result.name}' in the GraphQL Schema.`))
-                    .val()
-                :   null,
-            utils: { isEnum: schemaAST.isEnum }
-        })
+    .next(schemaProp => {
+        if (schemaProp)
+            return { 
+                name: queryProp.name, 
+                kind: queryProp.kind,
+                type: schemaProp.details.result.name, 
+                metadata: schemaProp.details.metadata,
+                isNode: isNodeType(schemaProp.details.result.name, schemaAST),
+                edge: getEdgeDesc(schemaProp.details.metadata), 
+                args: queryProp.args,
+                properties: queryProp.properties && queryProp.properties.length > 0
+                    ?   chain(schemaProp.details.result.name)
+                        .next(typename => (typename.match(/^\[(.*?)\]$/) || [null, typename])[1])
+                        .next(typename => schemaAST.find(x => x.type == 'TYPE' && x.name == typename))
+                        .next(parentTypeAST => parentTypeAST 
+                            ? queryProp.properties.map(queryProp => getQueryFields(queryProp, parentTypeAST, schemaAST))
+                            : throwError(true, `Error in method 'getQueryFields': Cannot find type '${schemaProp.details.result.name}' in the GraphQL Schema.`))
+                        .val()
+                    :   null
+            }
+        else
+            return { 
+                name: queryProp.name, 
+                kind: queryProp.kind,
+                type: null, 
+                metadata: null,
+                isNode: null,
+                edge: null, 
+                args: queryProp.args,
+                properties: queryProp.properties,
+                error: schemaProp ? null : `Error in method 'getQueryFields': Query function '${queryProp.name}' is not defined in the GraphQL schema (specifically in the 'parentTypeAST' argument).`
+            }
+    })
     .val()
 
 /**
@@ -142,7 +155,8 @@ const getQueryOrMutationAST = (operation, schemaAST, queryType='Query') =>
 const parseProperties = selectionSet => !selectionSet ? null : (selectionSet.selections || []).map(x => ({
     name: `${x.alias ? x.alias.value + ':' : ''}${x.name.value}`,
     args: parseArguments(x.arguments),
-    properties: parseProperties(x.selectionSet)
+    properties: parseProperties(x.selectionSet),
+    kind: x.kind
 }))
 
 const parseKeyValue = ({ kind, name, value }) => ({
@@ -160,23 +174,35 @@ const parseArguments = astArgs => !astArgs || !astArgs.length
     ? null 
     : astArgs.map(a => parseKeyValue(a))
 
+const parseFragments = (fragments = []) => fragments.length == 0 ? null : fragments.map(fragment => ({
+    name: (fragment.name || {}).value,
+    type: ((fragment.typeCondition || {}).name || {}).value,
+    properties: parseProperties(fragment.selectionSet)
+}))
+
 const _graphQlQueryTypes = { 'query': 'Query', 'mutation': 'Mutation', 'subscription': 'Subscription' }
-const getQueryAST = (query, schemaAST) => {
-    const ast = ((parse(query) || {}).definitions || [])[0]
+/**
+ * [description]
+ * @param  {[type]}  query          [description]
+ * @param  {[type]}  schemaAST      [description]
+ * @param  {Boolean} options.defrag [description]
+ * @return {[type]}                 [description]
+ */
+const getQueryAST = (query, schemaAST, options={}) => {
+    const parsedQuery = (parse(query) || {}).definitions || []
+    const ast = parsedQuery.find(x => x.kind == 'OperationDefinition')
+    const fragments = parsedQuery.filter(x => x.kind == 'FragmentDefinition')
     if (ast) {
         const operation = {
             type: ast.operation,
             name: ast.name ? ast.name.value : null,
             variables: ast.variableDefinitions ? ast.variableDefinitions.map(({ variable:v, type:t }) => ({ name: v.name.value, type: t.name.value })) : null,
-            body: parseProperties(ast.selectionSet)
+            body: parseProperties(ast.selectionSet),
+            fragments: parseFragments(fragments)
         }
-        if (operation.body && operation.body.some(x => x.name == '__schema' || x.name == '__type'))
-            return { error: 'schema_data_not_supported', message: 'This version of graphql-s2s does not support analysing graphql queries about the schema itself.' }
-        else {
-            let output = getQueryOrMutationAST(operation, schemaAST, _graphQlQueryTypes[ast.operation] )
-            Object.assign(output, { filter: fn => filterQueryAST(output, fn) })
-            return output
-        }
+        let output = getQueryOrMutationAST(operation, schemaAST, _graphQlQueryTypes[ast.operation] )
+        Object.assign(output, { filter: fn => filterQueryAST(output, fn) })
+        return options.defrag ? defrag(output) : output
     }
     else
         return null
@@ -215,14 +241,22 @@ const filterQueryAST = (operation={}, metaFilter, onlyReturnBody=false) => {
 const buildQuery = (operation={}, skipOperationParsing=false) => 
     chain((operation.body || []).map(a => buildSingleQuery(a)).join('\n'))
     .next(body => `${skipOperationParsing ? '' : stringifyOperation(operation)}{\n${body}\n}`)
+    .next(op => operation.fragments && operation.fragments.length > 0
+        ? `${op}\n${stringifyFragments(operation.fragments)}`
+        : op)
     .val()
+
+const stringifyFragments = (fragments=[]) => 
+    fragments.map(f => `fragment ${f.name} on ${f.type} ${buildQuery({ body: f.properties }, true)}`).join('\n')
 
 const buildSingleQuery = AST => {
     if (AST && AST.name) {
         const fnName = AST.name
         const args = AST.args ? stringifyArgs(AST.args).trim() : ''
         const fields = AST.properties && AST.properties.length > 0 ? buildQuery({ body: AST.properties }, true) : ''
-        return `${fnName}${args ? `(${args})` : ''}${fields}`
+        return AST.kind == 'FragmentSpread' 
+            ? `...${fnName}` 
+            : `${fnName}${args ? `(${args})` : ''}${fields}`
     }
     else
         return ''
@@ -239,6 +273,71 @@ const stringifyValue = ({kind, value}) => {
 const stringifyArgs = (args=[]) => 
     `${args.map(arg => `${arg.name ? arg.name + ':' : '' }${stringifyValue(arg.value)}`).join(',')}`
 
+let _defragCache = {}
+const defrag = operation => {
+    if (operation && operation.fragments && operation.fragments.length > 0) {
+        // reset cache
+        _defragCache = {}
+        const body = replaceFragmentsInProperties(operation.body, operation.fragments)
+        // reset cache
+        _defragCache = {}
+        return Object.assign({}, operation, { body, fragments: null })
+    }
+    else
+        return operation
+}
+
+const replaceFragmentsInProperty = (prop, fragments=[]) => {
+    if (prop.kind == 'FragmentSpread') {
+        const fragmentName = prop.name
+        const fragment = fragments.find(f => f.name == fragmentName)
+        if (!fragment) 
+            throw new Error(`Invalid GraphQL query. Fragment '${fragmentName}' does not exist.`)
+
+        if (!_defragCache[fragmentName]) 
+            _defragCache[fragmentName] = replaceFragmentsInProperties(fragment.properties, fragments)
+
+        return _defragCache[fragmentName]
+    }
+    else if (prop.properties && prop.properties.length > 0) {
+        const properties = replaceFragmentsInProperties(prop.properties, fragments)
+        return Object.assign({}, prop, { properties })
+    } 
+    else
+        return prop
+}
+
+const replaceFragmentsInProperties = (properties, fragments=[]) => {
+    if (properties && properties.length > 0) {
+        const propertiesObj = properties.reduce((props, p) => {
+            const _p = replaceFragmentsInProperty(p, fragments)
+            if (Array.isArray(_p)) {
+                _p.forEach(property => {
+                    const existingProp = props[property.name]
+                    // Save it if this property is new or if the existing property does not have a metadata property 
+                    // WARNING: metadata == undefined is better than metadata == null as it really proves that metadata 
+                    // has never been set.
+                    if (!existingProp || existingProp.metadata == undefined)
+                        props[property.name] = property
+                })
+            }
+            else {
+                const existingProp = props[_p.name]
+                if (!existingProp || existingProp.metadata == undefined)
+                    props[_p.name] = _p
+            }
+            return props
+        }, {})
+
+        let results = []
+        for(let key in propertiesObj)
+             results.push(propertiesObj[key])
+
+        return results
+    }
+    else
+        return null
+}
 
 module.exports = {
     chain,
