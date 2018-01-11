@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
 */
 const _ = require('lodash')
-const { chain, log, escapeGraphQlSchema, getQueryAST } = require('./utilities')
+const { chain, log, escapeGraphQlSchema, getQueryAST, buildQuery } = require('./utilities')
 const { extractGraphMetadata, removeGraphMetadata } = require('./graphmetadata')
 
 const genericTypeRegEx = /<(.*?)>/
@@ -512,7 +512,8 @@ let graphqls2s = {
 		.val(),
 	extractGraphMetadata,
 	getGenericAlias,
-	getQueryAST
+	getQueryAST,
+	buildQuery
 }
 
 if (typeof(window) != 'undefined') window.graphqls2s = graphqls2s

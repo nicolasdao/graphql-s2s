@@ -5,13 +5,16 @@
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
 */
-const path = require('path');
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+const path = require('path')
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin')
 
-const env = process.env.WEBPACK_ENV;
-const outputfilename = "graphqls2s";
+const env = process.env.WEBPACK_ENV
+const outputfilename = "graphqls2s"
+const buildPlugins = [
+    new UglifyJSPlugin()
+]
 const { plugins, outputfile } = env == "build" 
-    ? { plugins: [new UglifyJSPlugin()], outputfile: `${outputfilename}.min.js` } 
+    ? { plugins: buildPlugins, outputfile: `${outputfilename}.min.js` } 
     : { plugins: [], outputfile: `${outputfilename}.js` } 
 
 module.exports = {
@@ -41,4 +44,4 @@ module.exports = {
     },
     devtool: 'source-map',
     plugins: plugins
-};
+}

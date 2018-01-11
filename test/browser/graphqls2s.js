@@ -10,6 +10,14 @@ var browserctxt = typeof(chai) != 'undefined'
 var assert = browserctxt ? chai.assert : null
 /*eslint-enable */
 
+function normalizeString(s) {
+  if (s) {
+    return s.replace(/\n|\t|\s/g, '')
+  } 
+  else
+    return ''
+}
+
 var runtest = function(s2s, assert) {
   var compressString = function(s) { return s.replace(/[\n\r]+/g, '').replace(/[\t\r]+/g, '').replace(/ /g,'') }
   var getSchemaAST = s2s.getSchemaAST
@@ -17,6 +25,7 @@ var runtest = function(s2s, assert) {
   var extractGraphMetadata = s2s.extractGraphMetadata
   var getGenericAlias = s2s.getGenericAlias
   var getQueryAST = s2s.getQueryAST
+  var buildQuery = s2s.buildQuery
 
   /*eslint-disable */
   describe('graphqls2s', () => 
@@ -771,7 +780,7 @@ union Details    =     PriceDetails | RacketDetails
   }`
 
   var mutation_dejwklccr429_iw = `
-  mutation Hello($person: String, $animal: String) {
+  mutation World($person: String, $animal: String) {
     hello:insert(input:{name:$person, kind: $animal}){
       id
       username
@@ -787,30 +796,197 @@ union Details    =     PriceDetails | RacketDetails
       it('Should retrieve all metadata associated to the query.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_input_dejwklccr429_iw)
-        var queryAST = getQueryAST(query_dejwklccr429_iw, schemaAST)
-        var mutationAST = getQueryAST(mutation_dejwklccr429_iw, schemaAST)
+        var queryOpAST = getQueryAST(query_dejwklccr429_iw, schemaAST)
+        var mutationOpAST = getQueryAST(mutation_dejwklccr429_iw, schemaAST)
 
-        assert.isOk(queryAST, `An query AST should exist.`)
-        assert.equal(queryAST.length, 2, `There should be 2 AST found for the query.`)
-        assert.equal(queryAST[1].name, 'users',`The 2nd AST should be named 'users'.`)
-        assert.isOk(queryAST[1].metadata,`metadata should be defined on the 'users' query.`)
-        assert.equal(queryAST[1].metadata.name, 'auth',`There should be an 'auth' metadata on the 'users' query.`)
-        assert.equal(queryAST[0].name, 'hello:users',`The 1st AST should be named 'hello:users'.`)
-        assert.isOk(queryAST[0].metadata,`metadata should be defined on the 'users' query.`)
-        assert.equal(queryAST[0].metadata.name, 'auth',`There should be an 'auth' metadata on the 'users' query.`)
+        const queryAST = queryOpAST.body
+        const mutationAST = mutationOpAST.body
 
-        assert.isOk(mutationAST, `An mutation AST should exist.`)
-        assert.equal(mutationAST.length, 2, `There should be 2 AST found for the mutation.`)
-        assert.equal(mutationAST[0].name, 'hello:insert',`The 1st AST should be named 'hello:insert'.`)
-        assert.isOk(mutationAST[0].metadata,`metadata should be defined on the 'users' mutation.`)
-        assert.equal(mutationAST[0].metadata.name, 'auth',`There should be an 'auth' metadata on the 'users' mutation.`)
-        assert.equal(mutationAST[1].name, 'update',`The 2nd AST should be named 'update'.`)
-        assert.isOk(mutationAST[1].metadata,`metadata should be defined on the 'users' mutation.`)
-        assert.equal(mutationAST[1].metadata.name, 'author',`There should be an 'auth' metadata on the 'users' mutation.`)
+        assert.equal(queryOpAST.type, 'query', 'Operation type should be \'query\'')
+        assert.equal(queryOpAST.name, 'Hello', 'Operation name should be \'Hello\'')
+        assert.isOk(queryOpAST.variables, 'Operation variable should exist')
+        assert.equal(queryOpAST.variables.length, 2, 'There should be 2 variables for the query operation.')
+        assert.equal(queryOpAST.variables[0].name, 'person', 'The 1st query variable should be \'person\'.')
+        assert.equal(queryOpAST.variables[0].type, 'String', 'The 1st query variable should be a \'String\' type.')
+        assert.equal(queryOpAST.variables[1].name, 'animal', 'The 2nd query variable should be \'animal\'.')
+        assert.equal(queryOpAST.variables[1].type, 'String', 'The 2nd query variable should be a \'String\' type.')
+        assert.isOk(queryAST, 'An query AST should exist.')
+        assert.equal(queryAST.length, 2, 'There should be 2 AST found for the query.')
+        assert.equal(queryAST[1].name, 'users','The 2nd AST should be named \'users\'.')
+        assert.isOk(queryAST[1].metadata,'metadata should be defined on the \'users\' query.')
+        assert.equal(queryAST[1].metadata.name, 'auth','There should be an \'auth\' metadata on the \'users\' query.')
+        assert.equal(queryAST[0].name, 'hello:users','The 1st AST should be named \'hello:users\'.')
+        assert.isOk(queryAST[0].metadata,'metadata should be defined on the \'users\' query.')
+        assert.equal(queryAST[0].metadata.name, 'auth','There should be an \'auth\' metadata on the \'users\' query.')
+
+
+        assert.equal(mutationOpAST.type, 'mutation', 'Operation type should be \'mutation\'')
+        assert.equal(mutationOpAST.name, 'World', 'Operation name should be \'World\'')
+        assert.isOk(mutationOpAST.variables, 'Operation variable should exist')
+        assert.equal(mutationOpAST.variables.length, 2, 'There should be 2 variables for the mutation operation.')
+        assert.equal(mutationOpAST.variables[0].name, 'person', 'The 1st query variable should be \'person\'.')
+        assert.equal(mutationOpAST.variables[0].type, 'String', 'The 1st query variable should be a \'String\' type.')
+        assert.equal(mutationOpAST.variables[1].name, 'animal', 'The 2nd query variable should be \'animal\'.')
+        assert.equal(mutationOpAST.variables[1].type, 'String', 'The 2nd query variable should be a \'String\' type.')
+        assert.isOk(mutationAST, 'An mutation AST should exist.')
+        assert.equal(mutationAST.length, 2, 'There should be 2 AST found for the mutation.')
+        assert.equal(mutationAST[0].name, 'hello:insert','The 1st AST should be named \'hello:insert\'.')
+        assert.isOk(mutationAST[0].metadata,'metadata should be defined on the \'users\' mutation.')
+        assert.equal(mutationAST[0].metadata.name, 'auth','There should be an \'auth\' metadata on the \'users\' mutation.')
+        assert.equal(mutationAST[1].name, 'update','The 2nd AST should be named \'update\'.')
+        assert.isOk(mutationAST[1].metadata,'metadata should be defined on the \'users\' mutation.')
+        assert.equal(mutationAST[1].metadata.name, 'author','There should be an \'auth\' metadata on the \'users\' mutation.')
+      })))
+
+  var schema_input_dmqfwnd7_ehd1 = `
+  type User {
+    id: ID!
+    username: String!
+    addesses(where: AddressWhere): [Address]
+    kind: String
+    gender: Gender
+  }
+
+  type Address {
+    street: String 
+    streetType: StreetType
+    postcode: String
+    country: Country
+  }
+
+  type Country {
+    @auth
+    id: ID
+    name: String
+  }
+
+  input AddressWhere {
+    postcode: String 
+    streetType: [StreetType]
+  }
+
+  type Query {
+    @auth
+    users(where: UserWhere, kind: String, street: [StreetType]): [User]
+    addresses: [Address]
+  }
+
+  input UserWhere {
+    id: ID 
+    name: String 
+    kind: String
+    gender: Gender
+  }
+
+  input UserInput {
+    name: String
+    kind: String
+  }
+
+  type Mutation {
+    @auth
+    insert(input: UserInput): User
+
+    @author
+    update(input: UserInput): User
+  }
+
+  enum StreetType {
+    STREET
+    ROAD 
+    PLACE
+  }
+
+  enum Gender {
+    MALE
+    FEMALE
+  }
+  `
+  var query_dmqfwnd7_ehd1 = `
+  query Hello($person: String, $animal: String) {
+    hello:users(where:{name:$person, kind: $animal}, kind: $animal){
+      id
+      username
+    }
+    users(where: { gender: MALE, id: 1, name: "Nic" }){
+      id
+      addesses(where: { streetType: [STREET, ROAD] }) {
+        street
+      }
+    }
+    test:users(street:[STREET, ROAD]){
+      id
+    }
+    addresses {
+      street
+      country {
+        id
+        name
+      }
+    }
+  }`
+
+  var query_filtered_dmqfwnd7_ehd1 = `
+  query Hello($person: String, $animal: String) {
+    addresses {
+      street
+      country {
+        name
+      }
+    }
+  }`
+
+  var mutation_dmqfwnd7_ehd1 = `
+  mutation World($person: String, $animal: String) {
+    hello:insert(input:{name:$person, kind: $animal}){
+      id
+      username
+    }
+    update(input: { name: "fred" }){
+      id
+    }
+  }`
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: REBUILD QUERY FROM QUERY AST', () => 
+      it('Should rebuild the query exactly similar to its original based on the query AST.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_input_dmqfwnd7_ehd1)
+        var queryAST = getQueryAST(query_dmqfwnd7_ehd1, schemaAST)
+        var mutationAST = getQueryAST(mutation_dmqfwnd7_ehd1, schemaAST)
+
+        var query = normalizeString(query_dmqfwnd7_ehd1)
+        var mutation = normalizeString(mutation_dmqfwnd7_ehd1)
+
+        var queryAnswer = normalizeString(buildQuery(queryAST))
+        var mutationAnswer = normalizeString(buildQuery(mutationAST))
+
+        assert.equal(queryAnswer, query, 'The rebuild query should match the original.')
+        assert.equal(mutationAnswer, mutation, 'The rebuild mutation should match the original.')
+      })))
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: FILTER QUERY BASED ON METADATA', () => 
+      it('Should rebuild a query different from its origin if some fields have been filtered from the orginal query.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_input_dmqfwnd7_ehd1)
+        var queryAST = getQueryAST(query_dmqfwnd7_ehd1, schemaAST)
+
+        const filteredQueryAST = queryAST.filter(a => !a.metadata || a.metadata.name != 'auth')
+        
+        var query = normalizeString(query_filtered_dmqfwnd7_ehd1)
+
+        var queryAnswer = normalizeString(buildQuery(filteredQueryAST))
+
+        assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
       })))
 }
 
+/*eslint-disable */
 if (browserctxt) runtest(graphqls2s, assert)
+  /*eslint-enable */
 
 if (typeof(module) != 'undefined')
   module.exports = {
