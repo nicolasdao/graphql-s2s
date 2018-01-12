@@ -887,6 +887,66 @@ union Details    =     PriceDetails | RacketDetails
         assert.isOk(queryOpAST)
       })))
 
+  var schema_input_dejwhj9456 = `
+  type User {
+    id: ID!
+    username: String!
+    details: UserDetails
+  }
+
+  type Address {
+    street: String
+  }
+
+  type UserDetails {
+    gender: String 
+    bankDetails: BankDetail
+  }
+
+  type BankDetail {
+    name: String 
+    @auth
+    account: String
+  }
+
+  type Query {
+    users: [User]
+    @auth
+    addresses: [Address]
+  }
+  `
+  var query_dejwhj9456 = `
+  query Hello($person: String, $animal: String) {
+    hello:users(where:{name:$person, kind: $animal}){
+      id
+      username
+      details {
+        gender 
+        bankDetails{
+          account
+        }
+      }
+    }
+    users{
+      id
+    }
+    addresses {
+      street
+    }
+  }`
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#getQueryAST: FIND ALL AST PATHS', () => 
+      it('Should return the details of all the AST paths that match a predicate.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_input_dejwhj9456)
+        var paths = getQueryAST(query_dejwhj9456, schemaAST).paths(x => x.metadata && x.metadata.name == 'auth')
+        assert.equal(paths.length, 2, 'There should be 2 fields with the \'auth\' metadata.')
+        assert.equal(paths[0], 'hello:users.details.bankDetails.account', '1st \'auth\' path does not match.')
+        assert.equal(paths[1], 'addresses', '2nd \'auth\' path does not match.')
+      })))
+
   var schema_input_dmqfwnd7_ehd1 = `
   type User {
     id: ID!

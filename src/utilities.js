@@ -202,7 +202,11 @@ const getQueryAST = (query, schemaAST, options={}) => {
         }
         const postProcess = options.defrag ? o => addMetadataToAST(defrag(o), schemaAST, _graphQlQueryTypes[ast.operation]) : o => o
         let output = postProcess(addMetadataToAST(operation, schemaAST, _graphQlQueryTypes[ast.operation] ))
-        Object.assign(output, { filter: fn => filterQueryAST(output, fn), some: fn => detectQueryAST(output, fn) })
+        Object.assign(output, { 
+            filter: fn => filterQueryAST(output, fn), 
+            some: fn => detectQueryAST(output, fn),
+            paths: fn => getQueryASTPath(output, fn)
+        })
         return output
     }
     else
@@ -220,12 +224,12 @@ const stringifyOperation = (operation={}) => {
     return acc.join(' ')
 }
 
-const filterQueryAST = (operation={}, metaFilter, onlyReturnBody=false) => {
-    if (operation.body && metaFilter) {
+const filterQueryAST = (operation={}, predicate, onlyReturnBody=false) => {
+    if (operation.body && predicate) {
         const filteredBody = operation.body
-            .filter(x => metaFilter(x))
+            .filter(x => predicate(x))
             .map(x => x.properties && x.properties.length > 0 
-                ? Object.assign({}, x, { properties: filterQueryAST({ body: x.properties }, metaFilter, true) })
+                ? Object.assign({}, x, { properties: filterQueryAST({ body: x.properties }, predicate, true) })
                 : x)
 
         return onlyReturnBody ? filteredBody : Object.assign({}, operation, { body: filteredBody })
@@ -234,10 +238,24 @@ const filterQueryAST = (operation={}, metaFilter, onlyReturnBody=false) => {
         return onlyReturnBody ? null : operation
 }
 
-const detectQueryAST = (operation={}, metaFilter) => 
+const detectQueryAST = (operation={}, predicate) => 
     operation.body && 
-    metaFilter && 
-    (operation.body.some(x => metaFilter(x)) || operation.body.some(x => detectQueryAST({ body: x.properties }, metaFilter)))
+    predicate && 
+    (operation.body.some(x => predicate(x)) || operation.body.some(x => detectQueryAST({ body: x.properties }, predicate)))
+
+const getQueryASTPath = (operation={}, predicate, parent='') => {
+    const prefix = parent ? parent + '.' : parent
+    if (operation.body && predicate) 
+        return operation.body.reduce((acc, p) => {
+            if (predicate(p))
+                acc.push(prefix + p.name)
+            if (p.properties)
+                acc.push(...getQueryASTPath({ body: p.properties }, predicate, prefix + p.name))
+            return acc
+        }, [])
+    else
+        return []
+}
 
 /**
  * Rebuild a string GraphQL query from the query AST
