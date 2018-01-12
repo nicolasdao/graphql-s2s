@@ -1111,25 +1111,22 @@ union Details    =     PriceDetails | RacketDetails
         var queryOpAST = getQueryAST(query_denjk6326hius_dew2h_, schemaAST)
         var rebuiltQuery = buildQuery(queryOpAST)
 
-        //console.log(rebuiltQuery)
-        //console.log(JSON.stringify(queryOpAST, null, '\t'))
-
         var query = normalizeString(query_denjk6326hius_dew2h_)
         var queryAnswer = normalizeString(rebuiltQuery)
 
         assert.equal(queryAnswer, query, 'The rebuild query for the schema request should match the original with fragments.')
-
-        //assert.equal(queryOpAST.error, 'schema_data_not_supported')
       })))
 
   var schema_den23S1 = `
   type User {
+    @auth
     id: ID!
+    @auth
+    password: String
     username: String!
   }
 
   type Query {
-    @auth
     users: [User]
   }
 
@@ -1165,6 +1162,15 @@ union Details    =     PriceDetails | RacketDetails
         }
       }
     }
+    users{
+      ...UserConfidential
+      username
+    }
+  }
+
+  fragment UserConfidential on User {
+    id
+    password
   }
 
   fragment FullType on __Type {
@@ -1227,27 +1233,26 @@ union Details    =     PriceDetails | RacketDetails
         }
       }
     }
+    users{
+      username
+    }
   }
   `
 
   /*eslint-disable */
   describe('graphqls2s', () => 
     describe('#buildQuery: FRAGMENTS #2', () => 
-      it('Should support merging fragments.', () => {
+      it('Should support merging fragments (DEFRAG).', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_den23S1)
         var queryOpAST = getQueryAST(query_den23S1, schemaAST, { defrag: true })
-        var rebuiltQuery = buildQuery(queryOpAST)
-
-        //console.log(rebuiltQuery)
-        //console.log(JSON.stringify(queryOpAST, null, '\t'))
+        var filteredOpAST = queryOpAST.filter(x => !x.metadata || x.metadata.name != 'auth')
+        var rebuiltQuery = buildQuery(filteredOpAST)
 
         var query = normalizeString(query_defragged_den23S1)
         var queryAnswer = normalizeString(rebuiltQuery)
 
         assert.equal(queryAnswer, query, 'The rebuild query for the schema request should match the original with fragments.')
-
-        //assert.equal(queryOpAST.error, 'schema_data_not_supported')
       })))
 }
 

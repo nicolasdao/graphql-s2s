@@ -89,7 +89,7 @@ const removeAlias = (query='') => query.split(':').slice(-1).join('')
  * @param  {Array}  schemaAST       Entire SchemaAST
  * @return {Object}                 Query prop's AST enriched with all metadata from the schemaAST
  */
-const getQueryFields = (queryProp, parentTypeAST, schemaAST) => 
+const addMetadataToProperty = (queryProp, parentTypeAST, schemaAST) => 
     chain(parentTypeAST.blockProps.find(x => x.details.name == removeAlias(queryProp.name)))
     .next(schemaProp => {
         if (schemaProp)
@@ -106,8 +106,8 @@ const getQueryFields = (queryProp, parentTypeAST, schemaAST) =>
                         .next(typename => (typename.match(/^\[(.*?)\]$/) || [null, typename])[1])
                         .next(typename => schemaAST.find(x => x.type == 'TYPE' && x.name == typename))
                         .next(parentTypeAST => parentTypeAST 
-                            ? queryProp.properties.map(queryProp => getQueryFields(queryProp, parentTypeAST, schemaAST))
-                            : throwError(true, `Error in method 'getQueryFields': Cannot find type '${schemaProp.details.result.name}' in the GraphQL Schema.`))
+                            ? queryProp.properties.map(queryProp => addMetadataToProperty(queryProp, parentTypeAST, schemaAST))
+                            : throwError(true, `Error in method 'addMetadataToProperty': Cannot find type '${schemaProp.details.result.name}' in the GraphQL Schema.`))
                         .val()
                     :   null
             }
@@ -121,7 +121,7 @@ const getQueryFields = (queryProp, parentTypeAST, schemaAST) =>
                 edge: null, 
                 args: queryProp.args,
                 properties: queryProp.properties,
-                error: schemaProp ? null : `Error in method 'getQueryFields': Query function '${queryProp.name}' is not defined in the GraphQL schema (specifically in the 'parentTypeAST' argument).`
+                error: schemaProp ? null : `Error in method 'addMetadataToProperty': Query function '${queryProp.name}' is not defined in the GraphQL schema (specifically in the 'parentTypeAST' argument).`
             }
     })
     .val()
@@ -135,7 +135,7 @@ const getQueryFields = (queryProp, parentTypeAST, schemaAST) =>
  * @return {String}  output.head    Head of the original query (e.g. Hello($person: String, $animal: String))
  * @return {String}  output.type    Query type (e.g. query || mutation || subscription)
  */
-const getQueryOrMutationAST = (operation, schemaAST, queryType='Query') => 
+const addMetadataToAST = (operation, schemaAST, queryType='Query') => 
     chain(
         // If that object has already been processed, then get it.
         schemaAST[`get${queryType}`] || 
@@ -143,7 +143,7 @@ const getQueryOrMutationAST = (operation, schemaAST, queryType='Query') =>
         chain(schemaAST[`get${queryType}`] = schemaAST.find(x => x.type == 'TYPE' && x.name == queryType)).next(() => schemaAST[`get${queryType}`]).val())
     .next(parentTypeAST => 
         chain(operation && operation.body
-            ? operation.body.map(prop => getQueryFields(prop, parentTypeAST, schemaAST))
+            ? operation.body.map(prop => addMetadataToProperty(prop, parentTypeAST, schemaAST))
             : [])
         .next(body => {
             operation.body = body
@@ -197,12 +197,13 @@ const getQueryAST = (query, schemaAST, options={}) => {
             type: ast.operation,
             name: ast.name ? ast.name.value : null,
             variables: ast.variableDefinitions ? ast.variableDefinitions.map(({ variable:v, type:t }) => ({ name: v.name.value, type: t.name.value })) : null,
-            body: parseProperties(ast.selectionSet),
+            body: parseProperties(ast.selectionSet), 
             fragments: parseFragments(fragments)
         }
-        let output = getQueryOrMutationAST(operation, schemaAST, _graphQlQueryTypes[ast.operation] )
+        const postProcess = options.defrag ? o => addMetadataToAST(defrag(o), schemaAST, _graphQlQueryTypes[ast.operation]) : o => o
+        let output = postProcess(addMetadataToAST(operation, schemaAST, _graphQlQueryTypes[ast.operation] ))
         Object.assign(output, { filter: fn => filterQueryAST(output, fn) })
-        return options.defrag ? defrag(output) : output
+        return output
     }
     else
         return null
