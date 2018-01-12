@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.7.0"></a>
+# [0.7.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.6.0...v0.7.0) (2018-01-12)
+
+
+### Bug Fixes
+
+* Defragging strips out the metadata from the AST ([a8444bb](https://github.com/nicolasdao/graphql-s2s/commit/a8444bb))
+
+
+### Features
+
+* Add support for defragmenting a query (i.e. injecting all fragments into the operation) ([058c49c](https://github.com/nicolasdao/graphql-s2s/commit/058c49c))
+
+
+
 <a name="0.6.0"></a>
 # [0.6.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.5.0...v0.6.0) (2018-01-11)
 
