@@ -196,7 +196,11 @@ const getQueryAST = (query, schemaAST, options={}) => {
         const operation = {
             type: ast.operation,
             name: ast.name ? ast.name.value : null,
-            variables: ast.variableDefinitions ? ast.variableDefinitions.map(({ variable:v, type:t }) => ({ name: v.name.value, type: t.name.value })) : null,
+            variables: ast.variableDefinitions 
+                ? ast.variableDefinitions.map(({ variable:v, type:t }) => ({ 
+                    name: v.name.value, 
+                    type: t.kind == 'ListType' ? `[${t.type.name.value}]` : t.name.value })) 
+                : null,
             body: parseProperties(ast.selectionSet), 
             fragments: parseFragments(fragments)
         }

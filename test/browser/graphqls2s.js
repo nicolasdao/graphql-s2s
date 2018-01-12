@@ -1075,6 +1075,67 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(mutationAnswer, mutation, 'The rebuild mutation should match the original.')
       })))
 
+  var schema_input_dejkhkgo324_rfe = `
+  type User {
+    id: ID!
+    username: String!
+    details: UserDetails
+  }
+
+  type Address {
+    street: String
+  }
+
+  type UserDetails {
+    gender: String 
+    bankDetails: BankDetail
+  }
+
+  type BankDetail {
+    name: String 
+    @auth
+    account: String
+  }
+
+  type Query {
+    users: [User]
+    @auth
+    addresses: [Address]
+  }
+  `
+  var query_dejkhkgo324_rfe = `
+  query queryProperties($id: ID, $tags: [String], $before: ID, $limit: Int) {
+    properties(where: {id: $id, tags: $tags}, paging: {before: $before, limit: $limit, direction: DESC}) {
+      id
+      images
+      tags
+      bathrooms
+      carspaces
+      bedrooms
+      headline
+      displayableAddress
+      streetNumber
+      suburb
+      postcode
+      state
+      __typename
+    }
+  }`
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: REBUILD QUERY FOR QUERIES WITH VARIABLES WITH ARRAYS', () => 
+      it('Should support queries with variables of type array.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_input_dejkhkgo324_rfe)
+        var queryOpAST = getQueryAST(query_dejkhkgo324_rfe, schemaAST)
+
+        var query = normalizeString(query_dejkhkgo324_rfe)
+        var queryAnswer = normalizeString(buildQuery(queryOpAST))
+
+        assert.equal(queryAnswer, query, 'The rebuild query should match the original with variables of type array.')
+      })))
+
   /*eslint-disable */
   describe('graphqls2s', () => 
     describe('#buildQuery: FILTER QUERY BASED ON METADATA', () => 
