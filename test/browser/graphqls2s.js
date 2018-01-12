@@ -838,6 +838,55 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(mutationAST[1].metadata.name, 'author','There should be an \'auth\' metadata on the \'users\' mutation.')
       })))
 
+  var schema_input_dejwhjpjynu98b_yt = `
+  type User {
+    id: ID!
+    username: String!
+    details: UserDetails
+  }
+
+  type UserDetails {
+    gender: String 
+    bankDetails: BankDetail
+  }
+
+  type BankDetail {
+    name: String 
+    @auth
+    account: String
+  }
+
+  type Query {
+    users: [User]
+  }
+  `
+  var query_dejwhjpjynu98b_yt = `
+  query Hello($person: String, $animal: String) {
+    hello:users(where:{name:$person, kind: $animal}){
+      id
+      username
+      details {
+        gender 
+        bankDetails{
+          account
+        }
+      }
+    }
+    users{
+      id
+    }
+  }`
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#getQueryAST: DETECT AST', () => 
+      it('Should detect if any query AST match a specific predicate.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_input_dejwhjpjynu98b_yt)
+        var queryOpAST = getQueryAST(query_dejwhjpjynu98b_yt, schemaAST).some(x => x.metadata && x.metadata.name == 'auth')
+        assert.isOk(queryOpAST)
+      })))
+
   var schema_input_dmqfwnd7_ehd1 = `
   type User {
     id: ID!

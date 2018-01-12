@@ -202,7 +202,7 @@ const getQueryAST = (query, schemaAST, options={}) => {
         }
         const postProcess = options.defrag ? o => addMetadataToAST(defrag(o), schemaAST, _graphQlQueryTypes[ast.operation]) : o => o
         let output = postProcess(addMetadataToAST(operation, schemaAST, _graphQlQueryTypes[ast.operation] ))
-        Object.assign(output, { filter: fn => filterQueryAST(output, fn) })
+        Object.assign(output, { filter: fn => filterQueryAST(output, fn), some: fn => detectQueryAST(output, fn) })
         return output
     }
     else
@@ -233,6 +233,11 @@ const filterQueryAST = (operation={}, metaFilter, onlyReturnBody=false) => {
     else
         return onlyReturnBody ? null : operation
 }
+
+const detectQueryAST = (operation={}, metaFilter) => 
+    operation.body && 
+    metaFilter && 
+    (operation.body.some(x => metaFilter(x)) || operation.body.some(x => detectQueryAST({ body: x.properties }, metaFilter)))
 
 /**
  * Rebuild a string GraphQL query from the query AST
