@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.9.2"></a>
+## [0.9.2](https://github.com/nicolasdao/graphql-s2s/compare/v0.9.1...v0.9.2) (2018-01-13)
+
+
+### Bug Fixes
+
+* Operation name does not work when multiple queries are defined in the request. ([9d648b9](https://github.com/nicolasdao/graphql-s2s/commit/9d648b9))
+
+
+
 <a name="0.9.1"></a>
 ## [0.9.1](https://github.com/nicolasdao/graphql-s2s/compare/v0.9.0...v0.9.1) (2018-01-12)
 
