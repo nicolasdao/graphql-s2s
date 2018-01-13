@@ -796,11 +796,11 @@ union Details    =     PriceDetails | RacketDetails
       it('Should retrieve all metadata associated to the query.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_input_dejwklccr429_iw)
-        var queryOpAST = getQueryAST(query_dejwklccr429_iw, schemaAST)
-        var mutationOpAST = getQueryAST(mutation_dejwklccr429_iw, schemaAST)
+        var queryOpAST = getQueryAST(query_dejwklccr429_iw, null, schemaAST)
+        var mutationOpAST = getQueryAST(mutation_dejwklccr429_iw, null, schemaAST)
 
-        const queryAST = queryOpAST.body
-        const mutationAST = mutationOpAST.body
+        const queryAST = queryOpAST.properties
+        const mutationAST = mutationOpAST.properties
 
         assert.equal(queryOpAST.type, 'query', 'Operation type should be \'query\'')
         assert.equal(queryOpAST.name, 'Hello', 'Operation name should be \'Hello\'')
@@ -883,7 +883,7 @@ union Details    =     PriceDetails | RacketDetails
       it('Should detect if any query AST match a specific predicate.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_input_dejwhjpjynu98b_yt)
-        var queryOpAST = getQueryAST(query_dejwhjpjynu98b_yt, schemaAST).some(x => x.metadata && x.metadata.name == 'auth')
+        var queryOpAST = getQueryAST(query_dejwhjpjynu98b_yt, null, schemaAST).some(x => x.metadata && x.metadata.name == 'auth')
         assert.isOk(queryOpAST)
       })))
 
@@ -941,7 +941,7 @@ union Details    =     PriceDetails | RacketDetails
       it('Should return the details of all the AST paths that match a predicate.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_input_dejwhj9456)
-        var paths = getQueryAST(query_dejwhj9456, schemaAST).paths(x => x.metadata && x.metadata.name == 'auth')
+        var paths = getQueryAST(query_dejwhj9456, null, schemaAST).paths(x => x.metadata && x.metadata.name == 'auth')
         assert.equal(paths.length, 2, 'There should be 2 fields with the \'auth\' metadata.')
         assert.equal(paths[0], 'hello:users.details.bankDetails.account', '1st \'auth\' path does not match.')
         assert.equal(paths[1], 'addresses', '2nd \'auth\' path does not match.')
@@ -1062,8 +1062,8 @@ union Details    =     PriceDetails | RacketDetails
       it('Should rebuild the query exactly similar to its original based on the query AST.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_input_dmqfwnd7_ehd1)
-        var queryAST = getQueryAST(query_dmqfwnd7_ehd1, schemaAST)
-        var mutationAST = getQueryAST(mutation_dmqfwnd7_ehd1, schemaAST)
+        var queryAST = getQueryAST(query_dmqfwnd7_ehd1, null, schemaAST)
+        var mutationAST = getQueryAST(mutation_dmqfwnd7_ehd1, null, schemaAST)
 
         var query = normalizeString(query_dmqfwnd7_ehd1)
         var mutation = normalizeString(mutation_dmqfwnd7_ehd1)
@@ -1128,7 +1128,7 @@ union Details    =     PriceDetails | RacketDetails
       it('Should support queries with variables of type array.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_input_dejkhkgo324_rfe)
-        var queryOpAST = getQueryAST(query_dejkhkgo324_rfe, schemaAST)
+        var queryOpAST = getQueryAST(query_dejkhkgo324_rfe, null, schemaAST)
 
         var query = normalizeString(query_dejkhkgo324_rfe)
         var queryAnswer = normalizeString(buildQuery(queryOpAST))
@@ -1142,7 +1142,7 @@ union Details    =     PriceDetails | RacketDetails
       it('Should rebuild a query different from its origin if some fields have been filtered from the orginal query.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_input_dmqfwnd7_ehd1)
-        var queryAST = getQueryAST(query_dmqfwnd7_ehd1, schemaAST)
+        var queryAST = getQueryAST(query_dmqfwnd7_ehd1, null, schemaAST)
 
         var filteredQueryAST = queryAST.filter(a => !a.metadata || a.metadata.name != 'auth')
         
@@ -1278,7 +1278,7 @@ union Details    =     PriceDetails | RacketDetails
       it('Should support queries with fragments.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_denjk6326hius_dew2h_)
-        var queryOpAST = getQueryAST(query_denjk6326hius_dew2h_, schemaAST)
+        var queryOpAST = getQueryAST(query_denjk6326hius_dew2h_, null, schemaAST)
         var rebuiltQuery = buildQuery(queryOpAST)
 
         var query = normalizeString(query_denjk6326hius_dew2h_)
@@ -1415,7 +1415,7 @@ union Details    =     PriceDetails | RacketDetails
       it('Should support merging fragments (DEFRAG).', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_den23S1)
-        var queryOpAST = getQueryAST(query_den23S1, schemaAST, { defrag: true })
+        var queryOpAST = getQueryAST(query_den23S1, null, schemaAST, { defrag: true })
         var filteredOpAST = queryOpAST.filter(x => !x.metadata || x.metadata.name != 'auth')
         var rebuiltQuery = buildQuery(filteredOpAST)
 
@@ -1423,6 +1423,165 @@ union Details    =     PriceDetails | RacketDetails
         var queryAnswer = normalizeString(rebuiltQuery)
 
         assert.equal(queryAnswer, query, 'The rebuild query for the schema request should match the original with fragments.')
+      })))
+
+  var schema_den23S1_3289gpsgp567xazaa = `
+  type User {
+    @auth
+    id: ID!
+    @auth
+    password: String
+    username: String!
+  }
+
+  type Query {
+    users: [User]
+  }
+
+  input UserInput {
+    name: String
+    kind: String
+  }
+
+  type Mutation {
+    @auth
+    insert(input: UserInput): User
+
+    @author
+    update(input: UserInput): User
+  }
+  `
+
+  var query_den23S1_3289gpsgp567xazaa = `
+  query IntrospectionQuery {
+    __schema {
+      queryType { name }
+      mutationType { name }
+      subscriptionType { name }
+      types {
+        ...FullType
+      }
+      directives {
+        name
+        description
+        locations
+        args {
+          ...InputValue
+        }
+      }
+    }
+    users{
+      ...UserConfidential
+      username
+    }
+  }
+
+  query Test {
+    users{
+      ...UserConfidential
+      username
+    }
+  }
+
+  fragment UserConfidential on User {
+    id
+    password
+  }
+
+  fragment FullType on __Type {
+    fields(includeDeprecated: true) {
+      name
+      description
+    }
+    inputFields {
+      ...InputValue
+    }
+    possibleTypes {
+      ...TypeRef
+    }
+  }
+
+  fragment InputValue on __InputValue {
+    name
+    type { ...TypeRef }
+  }
+
+  fragment TypeRef on __Type {
+    kind
+    name
+  }
+  `
+
+  var query_defragged_introspectionquery_den23s1_3289gpsgp567xazaa = `
+  query IntrospectionQuery {
+    __schema {
+      queryType { name }
+      mutationType { name }
+      subscriptionType { name }
+      types {
+        fields(includeDeprecated: true) {
+          name
+          description
+        }
+        inputFields {
+          name
+          type {
+            kind
+            name
+          }
+        }
+        possibleTypes {
+          kind
+          name
+        }
+      }
+      directives {
+        name
+        description
+        locations
+        args {
+          name
+          type {
+            kind
+            name
+          }
+        }
+      }
+    }
+    users{
+      username
+    }
+  }
+  `
+
+  var query_defragged_test_den23S1_3289gpsgp567xazaa = `
+  query Test {
+    users{
+      username
+    }
+  }
+  `
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: FRAGMENTS #2', () => 
+      it('Should support queries with multiple queries.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_den23S1_3289gpsgp567xazaa)
+        var queryOpASTIntrospec = getQueryAST(query_den23S1_3289gpsgp567xazaa, 'IntrospectionQuery', schemaAST, { defrag: true })
+        var filteredOpASTIntrospec = queryOpASTIntrospec.filter(x => !x.metadata || x.metadata.name != 'auth')
+        var rebuiltQueryIntrospec = buildQuery(filteredOpASTIntrospec)
+        var queryOpASTTest = getQueryAST(query_den23S1_3289gpsgp567xazaa, 'Test', schemaAST, { defrag: true })
+        var filteredOpASTTest = queryOpASTTest.filter(x => !x.metadata || x.metadata.name != 'auth')
+        var rebuiltQueryTest = buildQuery(filteredOpASTTest)
+
+        var query_introspec = normalizeString(query_defragged_introspectionquery_den23s1_3289gpsgp567xazaa)
+        var query_test = normalizeString(query_defragged_test_den23S1_3289gpsgp567xazaa)
+        var queryAnswer_introspec = normalizeString(rebuiltQueryIntrospec)
+        var queryAnswer_test = normalizeString(rebuiltQueryTest)
+
+        assert.equal(queryAnswer_introspec, query_introspec, 'The rebuild introspec query for the schema request should match the original with fragments.')
+        assert.equal(queryAnswer_test, query_test, 'The rebuild test query for the schema request should match the original with fragments.')
       })))
 }
 

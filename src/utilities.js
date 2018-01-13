@@ -142,11 +142,11 @@ const addMetadataToAST = (operation, schemaAST, queryType='Query') =>
         // If this is the first time we access that object, then compute it and save it for later.
         chain(schemaAST[`get${queryType}`] = schemaAST.find(x => x.type == 'TYPE' && x.name == queryType)).next(() => schemaAST[`get${queryType}`]).val())
     .next(parentTypeAST => 
-        chain(operation && operation.body
-            ? operation.body.map(prop => addMetadataToProperty(prop, parentTypeAST, schemaAST))
+        chain(operation && operation.properties
+            ? operation.properties.map(prop => addMetadataToProperty(prop, parentTypeAST, schemaAST))
             : [])
         .next(body => {
-            operation.body = body
+            operation.properties = body
             return operation
         })
         .val())
@@ -188,9 +188,15 @@ const _graphQlQueryTypes = { 'query': 'Query', 'mutation': 'Mutation', 'subscrip
  * @param  {Boolean} options.defrag [description]
  * @return {[type]}                 [description]
  */
-const getQueryAST = (query, schemaAST, options={}) => {
+const getQueryAST = (query, operationName, schemaAST, options={}) => {
     const parsedQuery = (parse(query) || {}).definitions || []
-    const ast = parsedQuery.find(x => x.kind == 'OperationDefinition')
+    const ast = parsedQuery.find(x => x.kind == 'OperationDefinition' && (!operationName || x.name.value == operationName))
+    if (!ast) {
+        if (operationName)
+            throw new Error(`Invalid Graphql query. Operation name '${operationName}' is not defined in the query.`)
+        else
+            throw new Error('Invalid Graphql query. No \'OperationDefinition\' defined in the query.')
+    }
     const fragments = parsedQuery.filter(x => x.kind == 'FragmentDefinition')
     if (ast) {
         const operation = {
@@ -201,7 +207,7 @@ const getQueryAST = (query, schemaAST, options={}) => {
                     name: v.name.value, 
                     type: t.kind == 'ListType' ? `[${t.type.name.value}]` : t.name.value })) 
                 : null,
-            body: parseProperties(ast.selectionSet), 
+            properties: parseProperties(ast.selectionSet), 
             fragments: parseFragments(fragments)
         }
         const postProcess = options.defrag ? o => addMetadataToAST(defrag(o), schemaAST, _graphQlQueryTypes[ast.operation]) : o => o
@@ -229,32 +235,32 @@ const stringifyOperation = (operation={}) => {
 }
 
 const filterQueryAST = (operation={}, predicate, onlyReturnBody=false) => {
-    if (operation.body && predicate) {
-        const filteredBody = operation.body
+    if (operation.properties && predicate) {
+        const filteredBody = operation.properties
             .filter(x => predicate(x))
             .map(x => x.properties && x.properties.length > 0 
-                ? Object.assign({}, x, { properties: filterQueryAST({ body: x.properties }, predicate, true) })
+                ? Object.assign({}, x, { properties: filterQueryAST(x, predicate, true) })
                 : x)
 
-        return onlyReturnBody ? filteredBody : Object.assign({}, operation, { body: filteredBody })
+        return onlyReturnBody ? filteredBody : Object.assign({}, operation, { properties: filteredBody })
     }
     else
         return onlyReturnBody ? null : operation
 }
 
 const detectQueryAST = (operation={}, predicate) => 
-    operation.body && 
+    operation.properties && 
     predicate && 
-    (operation.body.some(x => predicate(x)) || operation.body.some(x => detectQueryAST({ body: x.properties }, predicate)))
+    (operation.properties.some(x => predicate(x)) || operation.properties.some(x => detectQueryAST(x, predicate)))
 
 const getQueryASTPath = (operation={}, predicate, parent='') => {
     const prefix = parent ? parent + '.' : parent
-    if (operation.body && predicate) 
-        return operation.body.reduce((acc, p) => {
+    if (operation.properties && predicate) 
+        return operation.properties.reduce((acc, p) => {
             if (predicate(p))
                 acc.push(prefix + p.name)
             if (p.properties)
-                acc.push(...getQueryASTPath({ body: p.properties }, predicate, prefix + p.name))
+                acc.push(...getQueryASTPath(p, predicate, prefix + p.name))
             return acc
         }, [])
     else
@@ -267,7 +273,7 @@ const getQueryASTPath = (operation={}, predicate, parent='') => {
  * @return {String}             String GraphQL query
  */
 const buildQuery = (operation={}, skipOperationParsing=false) => 
-    chain((operation.body || []).map(a => buildSingleQuery(a)).join('\n'))
+    chain((operation.properties || []).map(a => buildSingleQuery(a)).join('\n'))
     .next(body => `${skipOperationParsing ? '' : stringifyOperation(operation)}{\n${body}\n}`)
     .next(op => operation.fragments && operation.fragments.length > 0
         ? `${op}\n${stringifyFragments(operation.fragments)}`
@@ -275,13 +281,13 @@ const buildQuery = (operation={}, skipOperationParsing=false) =>
     .val()
 
 const stringifyFragments = (fragments=[]) => 
-    fragments.map(f => `fragment ${f.name} on ${f.type} ${buildQuery({ body: f.properties }, true)}`).join('\n')
+    fragments.map(f => `fragment ${f.name} on ${f.type} ${buildQuery(f, true)}`).join('\n')
 
 const buildSingleQuery = AST => {
     if (AST && AST.name) {
         const fnName = AST.name
         const args = AST.args ? stringifyArgs(AST.args).trim() : ''
-        const fields = AST.properties && AST.properties.length > 0 ? buildQuery({ body: AST.properties }, true) : ''
+        const fields = AST.properties && AST.properties.length > 0 ? buildQuery(AST, true) : ''
         return AST.kind == 'FragmentSpread' 
             ? `...${fnName}` 
             : `${fnName}${args ? `(${args})` : ''}${fields}`
@@ -306,10 +312,10 @@ const defrag = operation => {
     if (operation && operation.fragments && operation.fragments.length > 0) {
         // reset cache
         _defragCache = {}
-        const body = replaceFragmentsInProperties(operation.body, operation.fragments)
+        const properties = replaceFragmentsInProperties(operation.properties, operation.fragments)
         // reset cache
         _defragCache = {}
-        return Object.assign({}, operation, { body, fragments: null })
+        return Object.assign({}, operation, { properties, fragments: null })
     }
     else
         return operation
