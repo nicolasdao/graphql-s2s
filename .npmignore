@@ -1,3 +1,5 @@
 src/
 test/
 webpack.config.js
+lib/graphqls2s.js
+lib/graphqls2s.js.map

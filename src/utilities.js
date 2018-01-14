@@ -349,15 +349,15 @@ const replaceFragmentsInProperties = (properties, fragments=[]) => {
                 _p.forEach(property => {
                     const existingProp = props[property.name]
                     // Save it if this property is new or if the existing property does not have a metadata property 
-                    // WARNING: metadata == undefined is better than metadata == null as it really proves that metadata 
+                    // WARNING: metadata === undefined is better than metadata == null as it really proves that metadata 
                     // has never been set.
-                    if (!existingProp || existingProp.metadata == undefined)
+                    if (!existingProp || existingProp.metadata === undefined)
                         props[property.name] = property
                 })
             }
             else {
                 const existingProp = props[_p.name]
-                if (!existingProp || existingProp.metadata == undefined)
+                if (!existingProp || existingProp.metadata === undefined)
                     props[_p.name] = _p
             }
             return props
