@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.9.4"></a>
+## [0.9.4](https://github.com/nicolasdao/graphql-s2s/compare/v0.9.3...v0.9.4) (2018-01-19)
+
+
+### Bug Fixes
+
+* Boolean is not supported while analysing graphql queries ([380f92b](https://github.com/nicolasdao/graphql-s2s/commit/380f92b))
+
+
+
 <a name="0.9.3"></a>
 ## [0.9.3](https://github.com/nicolasdao/graphql-s2s/compare/v0.9.2...v0.9.3) (2018-01-14)
 
