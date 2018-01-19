@@ -52,7 +52,7 @@ const throwError = (v, msg) => v ? (() => {throw new Error(msg)})() : true
  * @param  {Array}    schemaAST Array of schema objects
  * @return {Boolean}            Result
  */
-const GRAPHQLSCALARTYPES = { 'ID': true, 'String': true, 'Float': true, 'Int': true  }
+const GRAPHQLSCALARTYPES = { 'ID': true, 'String': true, 'Float': true, 'Int': true, 'Boolean': true  }
 const isNodeType = (type, schemaAST) => 
     chain(throwError(!type, 'Error in method \'isNodeType\': Argument \'type\' is required.'))
         .next(() => type.replace(/!$/, ''))

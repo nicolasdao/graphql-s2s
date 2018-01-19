@@ -947,6 +947,61 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(paths[1], 'addresses', '2nd \'auth\' path does not match.')
       })))
 
+  const schema_dskdf__2335e = `
+    type Property {
+      inspectionSchedule: InspectionSchedule
+    }
+
+    input PagingInput {
+      after: ID 
+      limit: Int 
+    }
+
+    type InspectionSchedule {
+      id: ID
+      nbrOfVisits: Int
+      byAppointment: Boolean
+      recurring: Boolean
+      description: String 
+      price: Float 
+    }
+
+    input DirectionalPagingInput inherits PagingInput {
+      before: ID 
+      direction: SortDirection
+    }
+
+    type Query {
+      properties(paging: DirectionalPagingInput): [Property]
+    }`
+
+  const query_dskdf__2335e = `query {
+    properties (paging: { limit: 10 }) {
+      inspectionSchedule {
+        id
+        nbrOfVisits
+        byAppointment
+        recurring
+        description
+        price
+      }
+    } 
+  }`
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#getQueryAST: BASIC TYPES SUPPORT', () => 
+      it('Should support queries with for basic types (id, string, int, boolean, float).', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_dskdf__2335e)
+        var queryOpASTIntrospec = getQueryAST(query_dskdf__2335e, null, schemaAST, { defrag: true })
+
+        var query = normalizeString(query_dskdf__2335e)
+        var queryAnswer = normalizeString(buildQuery(queryOpASTIntrospec))
+
+        assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
+      })))
+
   var schema_input_dmqfwnd7_ehd1 = `
   type User {
     id: ID!
@@ -1583,7 +1638,7 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(queryAnswer_introspec, query_introspec, 'The rebuild introspec query for the schema request should match the original with fragments.')
         assert.equal(queryAnswer_test, query_test, 'The rebuild test query for the schema request should match the original with fragments.')
       })))
-}
+} 
 
 /*eslint-disable */
 if (browserctxt) runtest(graphqls2s, assert)
