@@ -1638,6 +1638,42 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(queryAnswer_introspec, query_introspec, 'The rebuild introspec query for the schema request should match the original with fragments.')
         assert.equal(queryAnswer_test, query_test, 'The rebuild test query for the schema request should match the original with fragments.')
       })))
+
+  var schema_8790hdhke3 = `
+  type Message {
+    message: String
+  }
+
+  input CredsInput {
+    token: String!
+    password: String!
+  }
+
+  type Mutation {
+    resetPasswordMutation(creds: CredsInput): Message
+  }
+  `
+
+  var query_8790hdhke3 = `
+  mutation resetPasswordMutation($token: String!, $password: String!) {
+    userResetPassword(creds: {token: $token, password: $password}) {
+      message
+      __typename
+    }
+  }
+  `
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: SUPPORT NON-NULLABLE FIELDS', () => 
+      it('Should support queries with multiple queries.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_8790hdhke3)
+        var queryOpAST = getQueryAST(query_8790hdhke3, null, schemaAST, { defrag: true })
+        var rebuiltQuery = buildQuery(queryOpAST)
+
+        assert.equal(normalizeString(rebuiltQuery), normalizeString(query_8790hdhke3))
+      })))
 } 
 
 /*eslint-disable */
