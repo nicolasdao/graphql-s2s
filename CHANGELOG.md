@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.11.0"></a>
+# [0.11.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.9.6...v0.11.0) (2018-02-11)
+
+
+### Features
+
+* Add new propertyPaths method on the QueryAST object ([3a6fa2b](https://github.com/nicolasdao/graphql-s2s/commit/3a6fa2b))
+
+
+
 <a name="0.9.6"></a>
 ## [0.9.6](https://github.com/nicolasdao/graphql-s2s/compare/v0.9.5...v0.9.6) (2018-02-01)
 
