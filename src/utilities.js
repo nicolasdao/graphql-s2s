@@ -220,7 +220,7 @@ const getQueryAST = (query, operationName, schemaAST, options={}) => {
         Object.assign(output, { 
             filter: fn => filterQueryAST(output, fn), 
             some: fn => detectQueryAST(output, fn),
-            paths: fn => getQueryASTPath(output, fn)
+            propertyPaths: fn => getQueryASTPropertyPaths(output, fn)
         })
         return output
     }
@@ -258,14 +258,14 @@ const detectQueryAST = (operation={}, predicate) =>
     predicate && 
     (operation.properties.some(x => predicate(x)) || operation.properties.some(x => detectQueryAST(x, predicate)))
 
-const getQueryASTPath = (operation={}, predicate, parent='') => {
+const getQueryASTPropertyPaths = (operation={}, predicate, parent='') => {
     const prefix = parent ? parent + '.' : parent
     if (operation.properties && predicate) 
         return operation.properties.reduce((acc, p) => {
             if (predicate(p))
-                acc.push(prefix + p.name)
+                acc.push({ property: prefix + p.name, type: p.type })
             if (p.properties)
-                acc.push(...getQueryASTPath(p, predicate, prefix + p.name))
+                acc.push(...getQueryASTPropertyPaths(p, predicate, prefix + p.name))
             return acc
         }, [])
     else

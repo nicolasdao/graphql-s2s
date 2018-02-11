@@ -906,7 +906,7 @@ union Details    =     PriceDetails | RacketDetails
   type BankDetail {
     name: String 
     @auth
-    account: String
+    account: String!
   }
 
   type Query {
@@ -938,13 +938,15 @@ union Details    =     PriceDetails | RacketDetails
   /*eslint-disable */
   describe('graphqls2s', () => 
     describe('#getQueryAST: FIND ALL AST PATHS', () => 
-      it('Should return the details of all the AST paths that match a predicate.', () => {
+      it('Should return the details of all the AST property that match a predicate.', () => {
         /*eslint-enable */
         var schemaAST = getSchemaAST(schema_input_dejwhj9456)
-        var paths = getQueryAST(query_dejwhj9456, null, schemaAST).paths(x => x.metadata && x.metadata.name == 'auth')
+        var paths = getQueryAST(query_dejwhj9456, null, schemaAST).propertyPaths(x => x.metadata && x.metadata.name == 'auth')
         assert.equal(paths.length, 2, 'There should be 2 fields with the \'auth\' metadata.')
-        assert.equal(paths[0], 'hello:users.details.bankDetails.account', '1st \'auth\' path does not match.')
-        assert.equal(paths[1], 'addresses', '2nd \'auth\' path does not match.')
+        assert.equal(paths[0].property, 'hello:users.details.bankDetails.account', '1st \'auth\' path does not match.')
+        assert.equal(paths[0].type, 'String!')
+        assert.equal(paths[1].property, 'addresses', '2nd \'auth\' path does not match.')
+        assert.equal(paths[1].type, '[Address]')
       })))
 
   const schema_dskdf__2335e = `
