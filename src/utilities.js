@@ -159,16 +159,18 @@ const parseProperties = selectionSet => !selectionSet ? null : (selectionSet.sel
     kind: x.kind
 }))
 
-const parseKeyValue = ({ kind, name, value }) => ({
-    name: name ? name.value : null,
-    value: !name && !value.kind ? { kind, value } : {
-        kind: value.kind,
-        value: 
-            value.name ? value.name.value :
-            value.fields ? value.fields.map(f => parseKeyValue(f)) :
-            value.values ? value.values.map(v => parseKeyValue(v)) : value.value
+const parseKeyValue = ({ kind, name, value }) => {
+    return {
+        name: name ? name.value : null,
+        value: !name && !value.kind ? { kind, value } : {
+            kind: value.kind,
+            value: 
+                value.name ? value.name.value :
+                value.fields ? value.fields.map(f => parseKeyValue(f)) :
+                value.values ? value.values.map(v => v.value ? parseKeyValue(v) : v.fields.map(f => parseKeyValue(f))) : value.value
+        }
     }
-})
+}
 
 const parseArguments = astArgs => !astArgs || !astArgs.length 
     ? null 
@@ -310,7 +312,7 @@ const stringifyValue = ({kind, value}) => {
 }
 
 const stringifyArgs = (args=[]) => 
-    `${args.map(arg => `${arg.name ? arg.name + ':' : '' }${stringifyValue(arg.value)}`).join(',')}`
+    `${args.map(arg => Array.isArray(arg) ? `{${stringifyArgs(arg)}}` : `${arg.name ? arg.name + ':' : '' }${stringifyValue(arg.value)}`).join(',')}`
 
 let _defragCache = {}
 const defrag = operation => {

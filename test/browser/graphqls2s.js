@@ -1676,6 +1676,46 @@ union Details    =     PriceDetails | RacketDetails
 
         assert.equal(normalizeString(rebuiltQuery), normalizeString(query_8790hdhke3))
       })))
+
+  var schema_0987dcds12 = `
+  type Message {
+    message: String
+  }
+
+  input InputWhere {
+    name: String
+    locations: [LocationInput]
+  }
+
+  input LocationInput {
+    type: String 
+    value: String
+  }
+
+  type Query {
+    properties(where: InputWhere): Message
+  }
+  `
+
+  var query_0987dcds12 = `
+  query{
+    properties(where: { name: "Love", locations: [{ type: "house", value: "Bellevue hill" }] }){
+      message
+    }
+  }
+  `
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: SUPPORT INPUT WITH ARRAY VALUES', () => 
+      it('Should support input with array values.', () => {
+        /*eslint-enable */
+        var schemaAST = getSchemaAST(schema_0987dcds12)
+        var queryOpAST = getQueryAST(query_0987dcds12, null, schemaAST, { defrag: true })
+        var rebuiltQuery = buildQuery(queryOpAST)
+
+        assert.equal(normalizeString(rebuiltQuery), normalizeString(query_0987dcds12))
+      })))
 } 
 
 /*eslint-disable */
