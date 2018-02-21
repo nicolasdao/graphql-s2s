@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.11.1"></a>
+## [0.11.1](https://github.com/nicolasdao/graphql-s2s/compare/v0.11.0...v0.11.1) (2018-02-21)
+
+
+### Bug Fixes
+
+* getQueryAST breaks when the argument of the query contains an array of complex objects ([177baef](https://github.com/nicolasdao/graphql-s2s/commit/177baef))
+
+
+
 <a name="0.11.0"></a>
 # [0.11.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.9.6...v0.11.0) (2018-02-11)
 
