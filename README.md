@@ -17,7 +17,7 @@ GraphQL S2S enriches the standard GraphQL Schema string used by both [graphql.js
 # Install
 ### node
 ```js
-npm install 'graphql-s2s' --save
+npm install graphql-s2s --save
 ```
 ### browser
 ```html
