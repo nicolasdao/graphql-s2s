@@ -12,7 +12,7 @@ GraphQL S2S enriches the standard GraphQL Schema string used by both [graphql.js
 * [**Type Inheritance**](#type-inheritance)
 * [**Generic Types**](#generic-types)
 * [**Metadata Decoration**](#metadata-decoration)
-* [**Deconstructing - Transforming - Rebuilding Queries**](#deconstructing-transforming-rebuilding-queries)
+* [**Deconstructing - Transforming - Rebuilding Queries**](#deconstructing---transforming---rebuilding-queries)
 
 # Install
 ### node
@@ -145,7 +145,7 @@ The enriched schema provides a richer and more compact notation. The transpiler 
 
 _Metadata_ can be added to decorate the schema types and properties. Add whatever you want as long as it starts with _@_ and start hacking your schema. The original intent of that feature was to decorate the schema with metadata _@node_ and _@edge_ so we could add metadata about the nature of the relations between types.
 
-[**Deconstructing - Transforming - Rebuilding Queries**](#deconstructing-transforming-rebuilding-queries)
+[**Deconstructing - Transforming - Rebuilding Queries**](#deconstructing---transforming---rebuilding-queries)
 
 This feature allows your GraphQl server to deconstruct any GraphQl query as an AST that can then be filtered and modified based on your requirements. That AST can then be rebuilt as a valid GraphQL query. A great example of that feature in action is the [__graphql-authorize__](https://github.com/nicolasdao/graphql-authorize.git) middleware for [__graphql-serverless__](https://github.com/nicolasdao/graphql-serverless) which filters query's properties based on the user's rights.
 
