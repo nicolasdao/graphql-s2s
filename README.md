@@ -12,6 +12,7 @@ GraphQL S2S enriches the standard GraphQL Schema string used by both [graphql.js
 * [**Type Inheritance**](#type-inheritance)
 * [**Generic Types**](#generic-types)
 * [**Metadata Decoration**](#metadata-decoration)
+* [**Deconstructing - Transforming - Rebuilding Queries**](#deconstructing-transforming-rebuilding-queries)
 
 # Install
 ### node
@@ -20,7 +21,7 @@ npm install 'graphql-s2s' --save
 ```
 ### browser
 ```html
-<script src="https://unpkg.com/graphql-s2s@0.4.1/lib/graphqls2s.min.js"></script>
+<script src="https://unpkg.com/graphql-s2s@0.11.2/lib/graphqls2s.min.js"></script>
 ```
 > Using the awesome [unpkg.com](https://unpkg.com), all versions are supported at https<span>://unpkg</span>.com/graphql-s2s@__*:VERSION*__/lib/graphqls2s.min.js.
 The API will be accessible through the __*graphqls2s*__ object.
@@ -88,6 +89,9 @@ type Student inherits Person {
 }
 `
 ```
+
+More details in the [code below](#type-inheritance).
+
 [**Generic Types**](#generic-types)
 ```js
 const schema = `
@@ -115,6 +119,9 @@ type Teacher {
 }
 `
 ```
+
+More details in the [code below](#generic-types).
+
 [**Metadata Decoration**](#metadata-decoration)
 ```js
 const schema = `
@@ -137,6 +144,12 @@ type Student inherits Node {
 The enriched schema provides a richer and more compact notation. The transpiler converts the enriched schema into the standard expected by [graphql.js](https://github.com/graphql/graphql-js) (using the _buildSchema_ method) as well as the [Apollo Server](https://github.com/apollographql/graphql-tools). For more details on how to extract those extra information from the string schema, use the method _getSchemaAST_ (example in section [_Metadata Decoration_](#metadata-decoration)). 
 
 _Metadata_ can be added to decorate the schema types and properties. Add whatever you want as long as it starts with _@_ and start hacking your schema. The original intent of that feature was to decorate the schema with metadata _@node_ and _@edge_ so we could add metadata about the nature of the relations between types.
+
+[**Deconstructing - Transforming - Rebuilding Queries**](#deconstructing-transforming-rebuilding-queries)
+
+This feature allows your GraphQl server to deconstruct any GraphQl query as an AST that can then be filtered and modified based on your requirements. That AST can then be rebuilt as a valid GraphQL query. A great example of that feature in action is the [__graphql-authorize__](https://github.com/nicolasdao/graphql-authorize.git) middleware for [__graphql-serverless__](https://github.com/nicolasdao/graphql-serverless) which filters query's properties based on the user's rights.
+
+For a concrete example, refer to the [code below](#deconstructing-transforming-rebuilding-queries).
 
 # Examples
 _WARNING: the following examples will be based on '[graphql-tools](https://github.com/apollographql/graphql-tools)' from the Apollo team, but the string schema could also be used with the 'buildSchema' method from graphql.js_
@@ -506,6 +519,93 @@ const schemaObjects = getSchemaAST(schema);
 //		"implements": null 
 //	}
 ```
+### Deconstructing - Transforming - Rebuilding Queries
+This feature allows your GraphQl server to deconstruct any GraphQl query as an AST that can then be filtered and modified based on your requirements. That AST can then be rebuilt as a valid GraphQL query. A great example of that feature in action is the [__graphql-authorize__](https://github.com/nicolasdao/graphql-authorize.git) middleware for [__graphql-serverless__](https://github.com/nicolasdao/graphql-serverless) which filters query's properties based on the user's rights.
+
+```js
+const { getQueryAST, buildQuery, getSchemaAST } = require('graphql-s2s').graphqls2s
+const schema = `
+	type Property {
+		name: String
+		@auth
+		address: String
+	}
+	
+	input InputWhere {
+		name: String
+		locations: [LocationInput]
+	}
+	
+	input LocationInput {
+		type: String 
+		value: String
+	}
+	
+	type Query {
+		properties(where: InputWhere): [Property]
+	}`
+
+const query = `
+	query {
+		properties(where: { name: "Love", locations: [{ type: "house", value: "Bellevue hill" }] }){
+			name
+			address
+		}
+	}`
+
+const schemaAST = getSchemaAST(schema)
+const queryAST = getQueryAST(query, null, schemaAST)
+const rebuiltQuery = buildQuery(queryAST.filter(x => !x.metadata || x.metadata.name != 'auth'))
+
+//	query {
+//		properties(where:{name:"Love",locations:[{type:"house",value:"Bellevue hill"}]}){
+//			name
+//		}
+// 	}
+```
+
+Notice that the original query was requesting the `address` property. Because we decorated that property with the custom metadata `@auth` (feature demonstrated previously [Metadata Decoration](#metadata-decoration)), we were able to filter that property to then rebuilt the query without it.
+
+#### API
+
+__*getQueryAST(query, operationName, schemaAST, options): QueryAST*__
+
+Returns an GraphQl query AST.
+
+| Arguments      | type    | Description  |
+| :------------- |:-------:| :------------ |
+| query      	 | String  | GraphQl Query. |
+| operationName  | String  | GraphQl query operation. Only useful if multiple operations are defined in a single query, otherwise use `null`. |
+| schemaAST      | Object  | Original GraphQl schema AST obtained thanks to the `getSchemaAST` function. |
+| options.defrag | Boolean | If set to true and if the query contained fragments, then all fragments are replaced by their explicit definition in the AST. |
+
+__*QueryAST Object Structure*__
+
+| Properties | type   | Description  |
+| :--------- |:------:| :------------ |
+| name    	 | String | Field's name. |
+| kind       | String | Field's kind. |
+| type       | String | Field's type. |
+| metadata   | String | Field's metadata. |
+| args       | Array  | Array of argument objects. |
+| properties | Array  | Array of QueryAST objects. |
+
+__*QueryAST.filter((ast:QueryAST) => ...): QueryAST*__
+
+Returns a new QueryAST object where only ASTs complying to the predicate `ast => ...` are left.
+
+__*QueryAST.propertyPaths((ast:QueryAST) => ...): [String]*__
+
+Returns an array of strings. Each one represents the path to the query property that matches the predicate `ast => ...`.
+
+__*QueryAST.some((ast:QueryAST) => ...): Boolean*__
+
+Returns a boolean indicating whether the QueryAST contains at least one AST matching the predicate `ast => ...`.
+
+__*buildQuery(QueryAST): String*__
+
+Rebuilds a valid GraphQl query from a QueryAST object.
+
 # Contribute
 This project is built using Javascript ES6. Each version is also transpiled to ES5 using Babel through Webpack 2, so this project can run in the browser. In order to write unit test only once instead of duplicating it for each version of Javascript, the all unit tests have been written using Javascript ES5 in mocha. That means that if you want to test the project after some changes, you will need to first transpile the project to ES5. This can be done simply by running the following command:
 
@@ -533,6 +633,7 @@ Our other open-sourced projects:
 * [__*graphql-serverless*__](https://github.com/nicolasdao/graphql-serverless): GraphQL (incl. a GraphiQL interface) middleware for [webfunc](https://github.com/nicolasdao/webfunc).
 * [__*schemaglue*__](https://github.com/nicolasdao/schemaglue): Naturally breaks down your monolithic graphql schema into bits and pieces and then glue them back together.
 * [__*graphql-s2s*__](https://github.com/nicolasdao/graphql-s2s): Add GraphQL Schema support for type inheritance, generic typing, metadata decoration. Transpile the enriched GraphQL string schema into the standard string schema understood by graphql.js and the Apollo server client.
+* [__*graphql-authorize*__](https://github.com/nicolasdao/graphql-authorize.git): Authorization middleware for [graphql-serverless](https://github.com/nicolasdao/graphql-serverless). Add inline authorization straight into your GraphQl schema to restrict access to certain fields based on your user's rights.
 
 #### React & React Native
 * [__*react-native-game-engine*__](https://github.com/bberak/react-native-game-engine): A lightweight game engine for react native.
