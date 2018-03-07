@@ -26,6 +26,7 @@ var runtest = function(s2s, assert) {
   var getGenericAlias = s2s.getGenericAlias
   var getQueryAST = s2s.getQueryAST
   var buildQuery = s2s.buildQuery
+  var isTypeGeneric = s2s.isTypeGeneric
 
   /*eslint-disable */
   describe('graphqls2s', () => 
@@ -86,7 +87,7 @@ var runtest = function(s2s, assert) {
 
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: BASICS', () => 
+    describe('#transpileSchema: 01 - BASICS', () => 
       it('Should not affect a standard schema after transpilation.', () => {
         var output = transpileSchema(schema_input_vndfis)
         var answer = compressString(output)
@@ -128,7 +129,7 @@ var runtest = function(s2s, assert) {
     // Ref: 
     // - Name: The keyword "extend" is lost #1
     // - Raised by: kaihaase-wd 
-    describe('#transpileSchema: SUPPORT THE EXTEND KEYWORD', () => 
+    describe('#transpileSchema: 02 - SUPPORT THE EXTEND KEYWORD', () => 
       it(`Should support extending schema using the 'extend' keyword.`, () => {
         var output = transpileSchema(schema_input_vnwdvs)
         var answer = compressString(output)
@@ -160,7 +161,7 @@ var runtest = function(s2s, assert) {
 
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: INHERITANCE', () => 
+    describe('#transpileSchema: 03 - INHERITANCE', () => 
       it('Should add properties from the super type to the sub type.', () => {
         /*eslint-enable */
         var output = transpileSchema(schema_input_1)
@@ -194,7 +195,7 @@ var runtest = function(s2s, assert) {
   `
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: COMMENTED INHERITANCE', () => 
+    describe('#transpileSchema: 04 - COMMENTED INHERITANCE', () => 
       it('Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
         /*eslint-enable */
         var output = transpileSchema(schema_input_xdwe3d)
@@ -224,7 +225,7 @@ var runtest = function(s2s, assert) {
   `
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: GENERIC TYPES', () => 
+    describe('#transpileSchema: 05 - GENERIC TYPES', () => 
       it('Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
         /*eslint-enable */
         var output = transpileSchema(schema_input_2)
@@ -260,7 +261,7 @@ var runtest = function(s2s, assert) {
   `
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: REMOVE METADATA', () => 
+    describe('#transpileSchema: 06 - REMOVE METADATA', () => 
       it('Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
         /*eslint-enable */
         var output = transpileSchema(schema_input_3)
@@ -269,260 +270,317 @@ var runtest = function(s2s, assert) {
         assert.equal(answer,correct)
       })))
 
-  var schema_input_34234Hsw8 = `
-  type Brand {
-    id: ID!
-    name: String
-    posts: Page<Post>
-  }
-
-  @alias((T) => T + 's')
-  type Page<T> {
-    data: [T]
-  }
-  `
-  var schema_output_34234Hsw8 = `
-  type Brand {
-    id: ID!
-    name: String
-    posts: Posts
-  }
-
-  type Posts {
-    data: [Post]
-  }
-  `
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: ALIASES SUPPORT FOR GENERIC TYPES WITH THE @alias METADATA', () => 
+    describe('#transpileSchema: 07 - ALIASES SUPPORT FOR GENERIC TYPES WITH THE @alias METADATA', () => 
       it('Should allow to define custom names in generic types', () => {
         /*eslint-enable */
-        var output = transpileSchema(schema_input_34234Hsw8)
+        var schema = `
+        type Brand {
+          id: ID!
+          name: String
+          posts: Page<Post>
+        }
+
+        @alias((T) => T + 's')
+        type Page<T> {
+          data: [T]
+        }
+        `
+        var schema_output = `
+        type Brand {
+          id: ID!
+          name: String
+          posts: Posts
+        }
+
+        type Posts {
+          data: [Post]
+        }
+        `
+        var output = transpileSchema(schema)
         var answer = compressString(output)
-        var correct = compressString(schema_output_34234Hsw8)
+        var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })))
 
-  var schema_input_cdwbqjf24cden76532 = `
-  # ### Page - Pagination Metadata
-  # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
-  # Example:
-  #
-  # \`\`\`js
-  # getData(first: 100, skip: 200)
-  # \`\`\`
-  # Skips the first 200 items, and gets the next 100.
-  #
-  # To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
-  # example above, the returned Page object could be:
-  #
-  # \`\`\`js
-  # {
-  # first: 100,
-  # skip: 200,
-  # current: 3,
-  # total: {
-  #   size: 1000,
-  #   pages: 10
-  # }
-  # }
-  # \`\`\`
-  type Page {
-    # The pagination parameter sent in the query
-    first: Int!
-
-    # The pagination parameter sent in the query
-    skip: Int!
-
-    # The convertion from 'first' and 'after' in terms of the current page
-    # (e.g. { first: 100, after: 200 } -> current: 3).
-      current: Int!
-
-      # Inspect the total size of your dataset ignoring pagination.
-      total: DatasetSize
-  }
-
-  # ### DatasetSize - Pagination Metadata
-  # Used in the Page object to describe the total number of pages available.
-  type DatasetSize {
-    size: Int!
-    pages: Int!
-  }
-  `
-  var schema_output_cdwbqjf24cden76532 = `
-  # ### Page - Pagination Metadata
-  # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
-  # Example:
-  #
-  # \`\`\`js
-  # getData(first: 100, skip: 200)
-  # \`\`\`
-  # Skips the first 200 items, and gets the next 100.
-  #
-  # To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
-  # example above, the returned Page object could be:
-  #
-  # \`\`\`js
-  # {
-  # first: 100,
-  # skip: 200,
-  # current: 3,
-  # total: {
-  #   size: 1000,
-  #   pages: 10
-  # }
-  # }
-  # \`\`\`
-  type Page {
-      # The pagination parameter sent in the query
-      first: Int!
-      # The pagination parameter sent in the query
-      skip: Int!
-      # The convertion from 'first' and 'after' in terms of the current page
-      # (e.g. { first: 100, after: 200 } -> current: 3).
-      current: Int!
-      # Inspect the total size of your dataset ignoring pagination.
-      total: DatasetSize
-  }
-
-  # ### DatasetSize - Pagination Metadata
-  # Used in the Page object to describe the total number of pages available.
-  type DatasetSize {
-      size: Int!
-      pages: Int!
-  }`
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: COMPLEX COMMENTS WITH MARKDOWN CODE BLOCKS', () => 
+    describe('#transpileSchema: 08 - COMPLEX COMMENTS WITH MARKDOWN CODE BLOCKS', () => 
       it('Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
         /*eslint-enable */
-        var output = transpileSchema(schema_input_cdwbqjf24cden76532)
+        var schema = `
+        # ### Page - Pagination Metadata
+        # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
+        # Example:
+        #
+        # \`\`\`js
+        # getData(first: 100, skip: 200)
+        # \`\`\`
+        # Skips the first 200 items, and gets the next 100.
+        #
+        # To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
+        # example above, the returned Page object could be:
+        #
+        # \`\`\`js
+        # {
+        # first: 100,
+        # skip: 200,
+        # current: 3,
+        # total: {
+        #   size: 1000,
+        #   pages: 10
+        # }
+        # }
+        # \`\`\`
+        type Page {
+          # The pagination parameter sent in the query
+          first: Int!
+
+          # The pagination parameter sent in the query
+          skip: Int!
+
+          # The convertion from 'first' and 'after' in terms of the current page
+          # (e.g. { first: 100, after: 200 } -> current: 3).
+            current: Int!
+
+            # Inspect the total size of your dataset ignoring pagination.
+            total: DatasetSize
+        }
+
+        # ### DatasetSize - Pagination Metadata
+        # Used in the Page object to describe the total number of pages available.
+        type DatasetSize {
+          size: Int!
+          pages: Int!
+        }
+        `
+        var schema_output = `
+        # ### Page - Pagination Metadata
+        # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
+        # Example:
+        #
+        # \`\`\`js
+        # getData(first: 100, skip: 200)
+        # \`\`\`
+        # Skips the first 200 items, and gets the next 100.
+        #
+        # To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
+        # example above, the returned Page object could be:
+        #
+        # \`\`\`js
+        # {
+        # first: 100,
+        # skip: 200,
+        # current: 3,
+        # total: {
+        #   size: 1000,
+        #   pages: 10
+        # }
+        # }
+        # \`\`\`
+        type Page {
+            # The pagination parameter sent in the query
+            first: Int!
+            # The pagination parameter sent in the query
+            skip: Int!
+            # The convertion from 'first' and 'after' in terms of the current page
+            # (e.g. { first: 100, after: 200 } -> current: 3).
+            current: Int!
+            # Inspect the total size of your dataset ignoring pagination.
+            total: DatasetSize
+        }
+
+        # ### DatasetSize - Pagination Metadata
+        # Used in the Page object to describe the total number of pages available.
+        type DatasetSize {
+            size: Int!
+            pages: Int!
+        }`
+        var output = transpileSchema(schema)
         var answer = compressString(output)
-        var correct = compressString(schema_output_cdwbqjf24cden76532)
+        var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })))
 
-  var schema_input_fdwkhj42 = `scalar Date
-scalar Like
-
-  # This is some description of 
-  # what a Post object is plus an attemp to fool the scalar type.
-  type Post {
-    id: ID! 
-    # A name is a property.
-    name: String!
-    creationDate: Date
-    likeRate: Like
-  }
-
-  scalar Strength
-
-  type Test { id: ID }
-
-  type PostUserRating {
-    # Rating indicates the rating a user gave 
-    # to a post. Fooling test: type Test { id: ID }
-    rating: Strength!
-  }`
-
-  var schema_output_fdwkhj42 = `
-  # This is some description of 
-  # what a Post object is plus an attemp to fool the scalar type.
-  type Post {
-    id: ID! 
-    # A name is a property.
-    name: String!
-    creationDate: Date
-    likeRate: Like
-  }
-
-  type Test { id: ID }
-
-  type PostUserRating {
-    # Rating indicates the rating a user gave 
-    # to a post. Fooling test: type Test { id: ID }
-    rating: Strength!
-  }
-
-
-  scalar Date
-  scalar Like
-  scalar Strength`
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: SUPPORT FOR SCALAR', () => 
+    describe('#transpileSchema: 09 - SUPPORT FOR SCALAR', () => 
       it('Should support custom scalar types.', () => {
-        var output = transpileSchema(schema_input_fdwkhj42)
+        /*eslint-enable */
+        var schema_input = `scalar Date
+      scalar Like
+
+        # This is some description of 
+        # what a Post object is plus an attemp to fool the scalar type.
+        type Post {
+          id: ID! 
+          # A name is a property.
+          name: String!
+          creationDate: Date
+          likeRate: Like
+        }
+
+        scalar Strength
+
+        type Test { id: ID }
+
+        type PostUserRating {
+          # Rating indicates the rating a user gave 
+          # to a post. Fooling test: type Test { id: ID }
+          rating: Strength!
+        }`
+
+        var schema_output = `
+        # This is some description of 
+        # what a Post object is plus an attemp to fool the scalar type.
+        type Post {
+          id: ID! 
+          # A name is a property.
+          name: String!
+          creationDate: Date
+          likeRate: Like
+        }
+
+        type Test { id: ID }
+
+        type PostUserRating {
+          # Rating indicates the rating a user gave 
+          # to a post. Fooling test: type Test { id: ID }
+          rating: Strength!
+        }
+
+
+        scalar Date
+        scalar Like
+        scalar Strength`
+        var output = transpileSchema(schema_input)
         var answer = compressString(output)
-        var correct = compressString(schema_output_fdwkhj42)
+        var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })))
-
-  var schema_input_fdwfcds95d = `scalar Date
-scalar Like
-
-  union Product = Bicycle | Racket
-union Details    =     PriceDetails | RacketDetails     
-
-  # This is some description of 
-  # what a Post object is plus an attemp to fool the union type.
-  type Post {
-    id: ID! 
-    # A name is a property.
-    name: String!
-    creationDate: Date
-    likeRate: Like
-  }
-
-  scalar Strength
-
-  type Test { id: ID }
-
-  type PostUserRating {
-    # Rating indicates the rating a user gave 
-    # to a post. Fooling test: type Test { id: ID }
-    rating: Strength!
-  }`
-
-  var schema_output_fdwfcds95d = `
-  # This is some description of 
-  # what a Post object is plus an attemp to fool the union type.
-  type Post {
-    id: ID! 
-    # A name is a property.
-    name: String!
-    creationDate: Date
-    likeRate: Like
-  }
-
-  type Test { id: ID }
-
-  type PostUserRating {
-    # Rating indicates the rating a user gave 
-    # to a post. Fooling test: type Test { id: ID }
-    rating: Strength!
-  }
-
-
-  scalar Date
-  scalar Like
-  scalar Strength
-  union Product = Bicycle | Racket
-  union Details = PriceDetails | RacketDetails`
 
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: SUPPORT FOR UNION', () => 
+    describe('#transpileSchema: 10 - SUPPORT FOR UNION', () => 
       it('Should support union types.', () => {
-        var output = transpileSchema(schema_input_fdwfcds95d)
+        /*eslint-enable */
+        var schema = `scalar Date
+      scalar Like
+
+        union Product = Bicycle | Racket
+      union Details    =     PriceDetails | RacketDetails     
+
+        # This is some description of 
+        # what a Post object is plus an attemp to fool the union type.
+        type Post {
+          id: ID! 
+          # A name is a property.
+          name: String!
+          creationDate: Date
+          likeRate: Like
+        }
+
+        scalar Strength
+
+        type Test { id: ID }
+
+        type PostUserRating {
+          # Rating indicates the rating a user gave 
+          # to a post. Fooling test: type Test { id: ID }
+          rating: Strength!
+        }`
+
+        var schema_output = `
+        # This is some description of 
+        # what a Post object is plus an attemp to fool the union type.
+        type Post {
+          id: ID! 
+          # A name is a property.
+          name: String!
+          creationDate: Date
+          likeRate: Like
+        }
+
+        type Test { id: ID }
+
+        type PostUserRating {
+          # Rating indicates the rating a user gave 
+          # to a post. Fooling test: type Test { id: ID }
+          rating: Strength!
+        }
+
+
+        scalar Date
+        scalar Like
+        scalar Strength
+        union Product = Bicycle | Racket
+        union Details = PriceDetails | RacketDetails`
+        var output = transpileSchema(schema)
         var answer = compressString(output)
-        var correct = compressString(schema_output_fdwfcds95d)
+        var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })))
 
   /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#transpileSchema: 11 - NESTED GENERIC TYPES', () => 
+      it('Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
+        /*eslint-enable */
+
+        var schema = `
+        type StandardData<T> {
+          id: ID!
+          value: T
+        }
+
+        type Paged<T> {
+          data: [StandardData<T>]
+          cursor: ID
+        }
+
+        type User {
+          posts: Paged<Post>
+        }
+        `
+        var schema_output = `
+        type User {
+          posts: PagedPost
+        }
+
+        type StandardDataPost {
+          id: ID!
+          value: Post
+        }
+
+        type PagedPost {
+          data: [StandardDataPost]
+          cursor: ID
+        }
+        `
+
+        var output = transpileSchema(schema)
+        //console.log(output)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })))
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#isTypeGeneric', () => 
+      it('Should test whether or not a type is a generic type based on predefined type constraints.', () => {
+        /*eslint-enable */
+
+        assert.isOk(isTypeGeneric('Paged<T>', 'T'), '\'Paged<T>\', \'T\' should work.')
+        assert.isOk(isTypeGeneric('[T]', 'T'), '\'[T]\', \'T\' should work.')
+        assert.isOk(isTypeGeneric('[Paged<T>]', 'T'), '\'[Paged<T>]\', \'T\' should work.')
+        assert.isOk(!isTypeGeneric('Product', 'T'), '\'Product\', \'T\' should NOT work.')
+        assert.isOk(!isTypeGeneric('Paged<Product>', 'T'), '\'Paged<Product>\', \'T\' should NOT work.')
+        assert.isOk(!isTypeGeneric('[Paged<Product>]', 'T'), '\'[Paged<Product>]\', \'T\' should NOT work.')
+      })))
+
+  /*eslint-disable */ 
   describe('graphqls2s', () => 
     describe('#extractGraphMetadata: EXTRACT METADATA', () => 
       it('Should extract all metadata (i.e. data starting with \'@\') located on top of schema types of properties.', () => {
@@ -557,27 +615,27 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(meta2.parent.metadata.name, 'node')
       })))
 
-  var schema_input_aprck8 = `
-  # This is some description of 
-  # what a Post object is.
-  type Post {
-    id: ID! 
-    # A name is a property.
-    name: String!
-  }
-
-  input PostUserRating {
-    # Rating indicates the rating a user gave
-    # to a post.
-    rating: PostRating!
-  }
-  `
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getSchemaAST: BASICS', () => 
+    describe('#getSchemaAST: 01 - BASICS', () => 
       it('Should extract all types and their properties including their respective comments.', () => {
         /*eslint-enable */
-        var schemaParts = getSchemaAST(schema_input_aprck8)
+        var schema = `
+        # This is some description of 
+        # what a Post object is.
+        type Post {
+          id: ID! 
+          # A name is a property.
+          name: String!
+        }
+
+        input PostUserRating {
+          # Rating indicates the rating a user gave
+          # to a post.
+          rating: PostRating!
+        }
+        `
+        var schemaParts = getSchemaAST(schema)
         //console.log(schemaParts);
         assert.isOk(schemaParts, 'schemaParts should exist.')
         assert.equal(schemaParts.length, 2)
@@ -630,56 +688,56 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(type2Prop1.details.result.name, 'PostRating!')
       })))
 
-  var schema_input_pxbdksb204h = `
-  type Paged<T> {
-    data: [T]
-    cursor: ID
-  }
-  type Post {
-    name
-  }
-  type User {
-    username: String!
-    posts: Paged<Post>
-  } 
-  `
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getSchemaAST: GENERIC TYPES', () => 
+    describe('#getSchemaAST: 02 - GENERIC TYPES', () => 
       it('Should create new types for each instance of a generic type.', () => {
         /*eslint-enable */
-        var schemaParts = getSchemaAST(schema_input_pxbdksb204h)
+        var schema = `
+        type Paged<T> {
+          data: [T]
+          cursor: ID
+        }
+        type Post {
+          name
+        }
+        type User {
+          username: String!
+          posts: Paged<Post>
+        } 
+        `
+        var schemaParts = getSchemaAST(schema)
         assert.isOk(schemaParts)
         assert.equal(schemaParts.length, 4)
         var genObj = (schemaParts || []).filter(s => s.type == 'TYPE' && s.name == 'PagedPost')[0]
         assert.isOk(genObj, 'The object \'PagedPost\' that should have been auto-generated from Paged<Post> has not been created.')
       })))
 
-  var schema_input_dfewcsad356 = `
-  @supertype(() => { return 1*2; })
-  type PostUserRating inherits Post {
-    @brendan((args) => { return 'hello world'; })
-    rating: PostRating!
-    creationDate: String
-  }
-
-  @node
-  type Node {
-    @primaryKey
-    id: ID!
-  }
-
-  type Post inherits Node {
-    @boris 
-    name: String!
-  }
-  `
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getSchemaAST: INHERITED METADATA', () => 
+    describe('#getSchemaAST: 03 - INHERITED METADATA', () => 
       it('Should add properties from the super type to the sub type.', () => {
         /*eslint-enable */
-        var schemaParts = getSchemaAST(schema_input_dfewcsad356)
+        var schema = `
+        @supertype(() => { return 1*2; })
+        type PostUserRating inherits Post {
+          @brendan((args) => { return 'hello world'; })
+          rating: PostRating!
+          creationDate: String
+        }
+
+        @node
+        type Node {
+          @primaryKey
+          id: ID!
+        }
+
+        type Post inherits Node {
+          @boris 
+          name: String!
+        }
+        `
+        var schemaParts = getSchemaAST(schema)
 
         assert.isOk(schemaParts)
         assert.equal(schemaParts.length, 3)
@@ -744,60 +802,61 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(typeMeta3Prop2.details.metadata.name, 'boris')
       })))
 
-  var schema_input_dejwklccr429_iw = `
-  type User {
-    id: ID!
-    username: String!
-  }
-
-  type Query {
-    @auth
-    users: [User]
-  }
-
-  input UserInput {
-    name: String
-    kind: String
-  }
-
-  type Mutation {
-    @auth
-    insert(input: UserInput): User
-
-    @author
-    update(input: UserInput): User
-  }
-  `
-  var query_dejwklccr429_iw = `
-  query Hello($person: String, $animal: String) {
-    hello:users(where:{name:$person, kind: $animal}){
-      id
-      username
-    }
-    users{
-      id
-    }
-  }`
-
-  var mutation_dejwklccr429_iw = `
-  mutation World($person: String, $animal: String) {
-    hello:insert(input:{name:$person, kind: $animal}){
-      id
-      username
-    }
-    update(input: { name: "fred" }){
-      id
-    }
-  }`
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getQueryAST: GET METADATA', () => 
+    describe('#getQueryAST: 01 - GET METADATA', () => 
       it('Should retrieve all metadata associated to the query.', () => {
         /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_input_dejwklccr429_iw)
-        var queryOpAST = getQueryAST(query_dejwklccr429_iw, null, schemaAST)
-        var mutationOpAST = getQueryAST(mutation_dejwklccr429_iw, null, schemaAST)
+
+        var schema = `
+        type User {
+          id: ID!
+          username: String!
+        }
+
+        type Query {
+          @auth
+          users: [User]
+        }
+
+        input UserInput {
+          name: String
+          kind: String
+        }
+
+        type Mutation {
+          @auth
+          insert(input: UserInput): User
+
+          @author
+          update(input: UserInput): User
+        }
+        `
+        var query = `
+        query Hello($person: String, $animal: String) {
+          hello:users(where:{name:$person, kind: $animal}){
+            id
+            username
+          }
+          users{
+            id
+          }
+        }`
+
+        var mutation = `
+        mutation World($person: String, $animal: String) {
+          hello:insert(input:{name:$person, kind: $animal}){
+            id
+            username
+          }
+          update(input: { name: "fred" }){
+            id
+          }
+        }`
+
+        var schemaAST = getSchemaAST(schema)
+        var queryOpAST = getQueryAST(query, null, schemaAST)
+        var mutationOpAST = getQueryAST(mutation, null, schemaAST)
 
         const queryAST = queryOpAST.properties
         const mutationAST = mutationOpAST.properties
@@ -838,110 +897,108 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(mutationAST[1].metadata.name, 'author','There should be an \'auth\' metadata on the \'users\' mutation.')
       })))
 
-  var schema_input_dejwhjpjynu98b_yt = `
-  type User {
-    id: ID!
-    username: String!
-    details: UserDetails
-  }
-
-  type UserDetails {
-    gender: String 
-    bankDetails: BankDetail
-  }
-
-  type BankDetail {
-    name: String 
-    @auth
-    account: String
-  }
-
-  type Query {
-    users: [User]
-  }
-  `
-  var query_dejwhjpjynu98b_yt = `
-  query Hello($person: String, $animal: String) {
-    hello:users(where:{name:$person, kind: $animal}){
-      id
-      username
-      details {
-        gender 
-        bankDetails{
-          account
-        }
-      }
-    }
-    users{
-      id
-    }
-  }`
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getQueryAST: DETECT AST', () => 
+    describe('#getQueryAST: 02 - DETECT AST', () => 
       it('Should detect if any query AST match a specific predicate.', () => {
         /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_input_dejwhjpjynu98b_yt)
-        var queryOpAST = getQueryAST(query_dejwhjpjynu98b_yt, null, schemaAST).some(x => x.metadata && x.metadata.name == 'auth')
+        var schema = `
+        type User {
+          id: ID!
+          username: String!
+          details: UserDetails
+        }
+
+        type UserDetails {
+          gender: String 
+          bankDetails: BankDetail
+        }
+
+        type BankDetail {
+          name: String 
+          @auth
+          account: String
+        }
+
+        type Query {
+          users: [User]
+        }
+        `
+        var query = `
+        query Hello($person: String, $animal: String) {
+          hello:users(where:{name:$person, kind: $animal}){
+            id
+            username
+            details {
+              gender 
+              bankDetails{
+                account
+              }
+            }
+          }
+          users{
+            id
+          }
+        }`
+        var schemaAST = getSchemaAST(schema)
+        var queryOpAST = getQueryAST(query, null, schemaAST).some(x => x.metadata && x.metadata.name == 'auth')
         assert.isOk(queryOpAST)
       })))
 
-  var schema_input_dejwhj9456 = `
-  type User {
-    id: ID!
-    username: String!
-    details: UserDetails
-  }
-
-  type Address {
-    street: String
-  }
-
-  type UserDetails {
-    gender: String 
-    bankDetails: BankDetail
-  }
-
-  type BankDetail {
-    name: String 
-    @auth
-    account: String!
-  }
-
-  type Query {
-    users: [User]
-    @auth
-    addresses: [Address]
-  }
-  `
-  var query_dejwhj9456 = `
-  query Hello($person: String, $animal: String) {
-    hello:users(where:{name:$person, kind: $animal}){
-      id
-      username
-      details {
-        gender 
-        bankDetails{
-          account
-        }
-      }
-    }
-    users{
-      id
-    }
-    addresses {
-      street
-    }
-  }`
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getQueryAST: FIND ALL AST PATHS', () => 
+    describe('#getQueryAST: 03 - FIND ALL AST PATHS', () => 
       it('Should return the details of all the AST property that match a predicate.', () => {
         /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_input_dejwhj9456)
-        var paths = getQueryAST(query_dejwhj9456, null, schemaAST).propertyPaths(x => x.metadata && x.metadata.name == 'auth')
+        var schema = `
+        type User {
+          id: ID!
+          username: String!
+          details: UserDetails
+        }
+
+        type Address {
+          street: String
+        }
+
+        type UserDetails {
+          gender: String 
+          bankDetails: BankDetail
+        }
+
+        type BankDetail {
+          name: String 
+          @auth
+          account: String!
+        }
+
+        type Query {
+          users: [User]
+          @auth
+          addresses: [Address]
+        }
+        `
+        var query = `
+        query Hello($person: String, $animal: String) {
+          hello:users(where:{name:$person, kind: $animal}){
+            id
+            username
+            details {
+              gender 
+              bankDetails{
+                account
+              }
+            }
+          }
+          users{
+            id
+          }
+          addresses {
+            street
+          }
+        }`
+        var schemaAST = getSchemaAST(schema)
+        var paths = getQueryAST(query, null, schemaAST).propertyPaths(x => x.metadata && x.metadata.name == 'auth')
         assert.equal(paths.length, 2, 'There should be 2 fields with the \'auth\' metadata.')
         assert.equal(paths[0].property, 'hello:users.details.bankDetails.account', '1st \'auth\' path does not match.')
         assert.equal(paths[0].type, 'String!')
@@ -949,181 +1006,169 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(paths[1].type, '[Address]')
       })))
 
-  const schema_dskdf__2335e = `
-    type Property {
-      inspectionSchedule: InspectionSchedule
-    }
-
-    input PagingInput {
-      after: ID 
-      limit: Int 
-    }
-
-    type InspectionSchedule {
-      id: ID
-      nbrOfVisits: Int
-      byAppointment: Boolean
-      recurring: Boolean
-      description: String 
-      price: Float 
-    }
-
-    input DirectionalPagingInput inherits PagingInput {
-      before: ID 
-      direction: SortDirection
-    }
-
-    type Query {
-      properties(paging: DirectionalPagingInput): [Property]
-    }`
-
-  const query_dskdf__2335e = `query {
-    properties (paging: { limit: 10 }) {
-      inspectionSchedule {
-        id
-        nbrOfVisits
-        byAppointment
-        recurring
-        description
-        price
-      }
-    } 
-  }`
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getQueryAST: BASIC TYPES SUPPORT', () => 
+    describe('#getQueryAST: 04 - BASIC TYPES SUPPORT', () => 
       it('Should support queries with for basic types (id, string, int, boolean, float).', () => {
         /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_dskdf__2335e)
-        var queryOpASTIntrospec = getQueryAST(query_dskdf__2335e, null, schemaAST, { defrag: true })
+        const schema = `
+        type Property {
+          inspectionSchedule: InspectionSchedule
+        }
 
-        var query = normalizeString(query_dskdf__2335e)
+        input PagingInput {
+          after: ID 
+          limit: Int 
+        }
+
+        type InspectionSchedule {
+          id: ID
+          nbrOfVisits: Int
+          byAppointment: Boolean
+          recurring: Boolean
+          description: String 
+          price: Float 
+        }
+
+        input DirectionalPagingInput inherits PagingInput {
+          before: ID 
+          direction: SortDirection
+        }
+
+        type Query {
+          properties(paging: DirectionalPagingInput): [Property]
+        }`
+
+      const query_input = `query {
+        properties (paging: { limit: 10 }) {
+          inspectionSchedule {
+            id
+            nbrOfVisits
+            byAppointment
+            recurring
+            description
+            price
+          }
+        } 
+      }`
+        var schemaAST = getSchemaAST(schema)
+        var queryOpASTIntrospec = getQueryAST(query_input, null, schemaAST, { defrag: true })
+
+        var query = normalizeString(query_input)
         var queryAnswer = normalizeString(buildQuery(queryOpASTIntrospec))
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
       })))
 
-  var schema_input_dmqfwnd7_ehd1 = `
-  type User {
-    id: ID!
-    username: String!
-    addesses(where: AddressWhere): [Address]
-    kind: String
-    gender: Gender
-  }
-
-  type Address {
-    street: String 
-    streetType: StreetType
-    postcode: String
-    country: Country
-  }
-
-  type Country {
-    @auth
-    id: ID
-    name: String
-  }
-
-  input AddressWhere {
-    postcode: String 
-    streetType: [StreetType]
-  }
-
-  type Query {
-    @auth
-    users(where: UserWhere, kind: String, street: [StreetType]): [User]
-    addresses: [Address]
-  }
-
-  input UserWhere {
-    id: ID 
-    name: String 
-    kind: String
-    gender: Gender
-  }
-
-  input UserInput {
-    name: String
-    kind: String
-  }
-
-  type Mutation {
-    @auth
-    insert(input: UserInput): User
-
-    @author
-    update(input: UserInput): User
-  }
-
-  enum StreetType {
-    STREET
-    ROAD 
-    PLACE
-  }
-
-  enum Gender {
-    MALE
-    FEMALE
-  }
-  `
-  var query_dmqfwnd7_ehd1 = `
-  query Hello($person: String, $animal: String) {
-    hello:users(where:{name:$person, kind: $animal}, kind: $animal){
-      id
-      username
-    }
-    users(where: { gender: MALE, id: 1, name: "Nic" }){
-      id
-      addesses(where: { streetType: [STREET, ROAD] }) {
-        street
-      }
-    }
-    test:users(street:[STREET, ROAD]){
-      id
-    }
-    addresses {
-      street
-      country {
-        id
-        name
-      }
-    }
-  }`
-
-  var query_filtered_dmqfwnd7_ehd1 = `
-  query Hello($person: String, $animal: String) {
-    addresses {
-      street
-      country {
-        name
-      }
-    }
-  }`
-
-  var mutation_dmqfwnd7_ehd1 = `
-  mutation World($person: String, $animal: String) {
-    hello:insert(input:{name:$person, kind: $animal}){
-      id
-      username
-    }
-    update(input: { name: "fred" }){
-      id
-    }
-  }`
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#buildQuery: REBUILD QUERY FROM QUERY AST', () => 
+    describe('#buildQuery: 01 - REBUILD QUERY FROM QUERY AST', () => 
       it('Should rebuild the query exactly similar to its original based on the query AST.', () => {
         /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_input_dmqfwnd7_ehd1)
-        var queryAST = getQueryAST(query_dmqfwnd7_ehd1, null, schemaAST)
-        var mutationAST = getQueryAST(mutation_dmqfwnd7_ehd1, null, schemaAST)
+        var schema = `
+        type User {
+          id: ID!
+          username: String!
+          addesses(where: AddressWhere): [Address]
+          kind: String
+          gender: Gender
+        }
 
-        var query = normalizeString(query_dmqfwnd7_ehd1)
-        var mutation = normalizeString(mutation_dmqfwnd7_ehd1)
+        type Address {
+          street: String 
+          streetType: StreetType
+          postcode: String
+          country: Country
+        }
+
+        type Country {
+          @auth
+          id: ID
+          name: String
+        }
+
+        input AddressWhere {
+          postcode: String 
+          streetType: [StreetType]
+        }
+
+        type Query {
+          @auth
+          users(where: UserWhere, kind: String, street: [StreetType]): [User]
+          addresses: [Address]
+        }
+
+        input UserWhere {
+          id: ID 
+          name: String 
+          kind: String
+          gender: Gender
+        }
+
+        input UserInput {
+          name: String
+          kind: String
+        }
+
+        type Mutation {
+          @auth
+          insert(input: UserInput): User
+
+          @author
+          update(input: UserInput): User
+        }
+
+        enum StreetType {
+          STREET
+          ROAD 
+          PLACE
+        }
+
+        enum Gender {
+          MALE
+          FEMALE
+        }
+        `
+        var query_input = `
+        query Hello($person: String, $animal: String) {
+          hello:users(where:{name:$person, kind: $animal}, kind: $animal){
+            id
+            username
+          }
+          users(where: { gender: MALE, id: 1, name: "Nic" }){
+            id
+            addesses(where: { streetType: [STREET, ROAD] }) {
+              street
+            }
+          }
+          test:users(street:[STREET, ROAD]){
+            id
+          }
+          addresses {
+            street
+            country {
+              id
+              name
+            }
+          }
+        }`
+
+        var mutation_input = `
+        mutation World($person: String, $animal: String) {
+          hello:insert(input:{name:$person, kind: $animal}){
+            id
+            username
+          }
+          update(input: { name: "fred" }){
+            id
+          }
+        }`
+        var schemaAST = getSchemaAST(schema)
+        var queryAST = getQueryAST(query_input, null, schemaAST)
+        var mutationAST = getQueryAST(mutation_input, null, schemaAST)
+
+        var query = normalizeString(query_input)
+        var mutation = normalizeString(mutation_input)
 
         var queryAnswer = normalizeString(buildQuery(queryAST))
         var mutationAnswer = normalizeString(buildQuery(mutationAST))
@@ -1132,62 +1177,61 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(mutationAnswer, mutation, 'The rebuild mutation should match the original.')
       })))
 
-  var schema_input_dejkhkgo324_rfe = `
-  type User {
-    id: ID!
-    username: String!
-    details: UserDetails
-  }
-
-  type Address {
-    street: String
-  }
-
-  type UserDetails {
-    gender: String 
-    bankDetails: BankDetail
-  }
-
-  type BankDetail {
-    name: String 
-    @auth
-    account: String
-  }
-
-  type Query {
-    users: [User]
-    @auth
-    addresses: [Address]
-  }
-  `
-  var query_dejkhkgo324_rfe = `
-  query queryProperties($id: ID, $tags: [String], $before: ID, $limit: Int) {
-    properties(where: {id: $id, tags: $tags}, paging: {before: $before, limit: $limit, direction: DESC}) {
-      id
-      images
-      tags
-      bathrooms
-      carspaces
-      bedrooms
-      headline
-      displayableAddress
-      streetNumber
-      suburb
-      postcode
-      state
-      __typename
-    }
-  }`
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#buildQuery: REBUILD QUERY FOR QUERIES WITH VARIABLES WITH ARRAYS', () => 
+    describe('#buildQuery: 02 - REBUILD QUERY FOR QUERIES WITH VARIABLES WITH ARRAYS', () => 
       it('Should support queries with variables of type array.', () => {
         /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_input_dejkhkgo324_rfe)
-        var queryOpAST = getQueryAST(query_dejkhkgo324_rfe, null, schemaAST)
+        var schema = `
+        type User {
+          id: ID!
+          username: String!
+          details: UserDetails
+        }
 
-        var query = normalizeString(query_dejkhkgo324_rfe)
+        type Address {
+          street: String
+        }
+
+        type UserDetails {
+          gender: String 
+          bankDetails: BankDetail
+        }
+
+        type BankDetail {
+          name: String 
+          @auth
+          account: String
+        }
+
+        type Query {
+          users: [User]
+          @auth
+          addresses: [Address]
+        }
+        `
+        var query_input = `
+        query queryProperties($id: ID, $tags: [String], $before: ID, $limit: Int) {
+          properties(where: {id: $id, tags: $tags}, paging: {before: $before, limit: $limit, direction: DESC}) {
+            id
+            images
+            tags
+            bathrooms
+            carspaces
+            bedrooms
+            headline
+            displayableAddress
+            streetNumber
+            suburb
+            postcode
+            state
+            __typename
+          }
+        }`
+        var schemaAST = getSchemaAST(schema)
+        var queryOpAST = getQueryAST(query_input, null, schemaAST)
+
+        var query = normalizeString(query_input)
         var queryAnswer = normalizeString(buildQuery(queryOpAST))
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the original with variables of type array.')
@@ -1195,116 +1239,209 @@ union Details    =     PriceDetails | RacketDetails
 
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#buildQuery: FILTER QUERY BASED ON METADATA', () => 
+    describe('#buildQuery: 03 - FILTER QUERY BASED ON METADATA', () => 
       it('Should rebuild a query different from its origin if some fields have been filtered from the orginal query.', () => {
         /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_input_dmqfwnd7_ehd1)
-        var queryAST = getQueryAST(query_dmqfwnd7_ehd1, null, schemaAST)
+        var schema = `
+        type User {
+          id: ID!
+          username: String!
+          addesses(where: AddressWhere): [Address]
+          kind: String
+          gender: Gender
+        }
+
+        type Address {
+          street: String 
+          streetType: StreetType
+          postcode: String
+          country: Country
+        }
+
+        type Country {
+          @auth
+          id: ID
+          name: String
+        }
+
+        input AddressWhere {
+          postcode: String 
+          streetType: [StreetType]
+        }
+
+        type Query {
+          @auth
+          users(where: UserWhere, kind: String, street: [StreetType]): [User]
+          addresses: [Address]
+        }
+
+        input UserWhere {
+          id: ID 
+          name: String 
+          kind: String
+          gender: Gender
+        }
+
+        input UserInput {
+          name: String
+          kind: String
+        }
+
+        type Mutation {
+          @auth
+          insert(input: UserInput): User
+
+          @author
+          update(input: UserInput): User
+        }
+
+        enum StreetType {
+          STREET
+          ROAD 
+          PLACE
+        }
+
+        enum Gender {
+          MALE
+          FEMALE
+        }
+        `
+        var query_input = `
+        query Hello($person: String, $animal: String) {
+          hello:users(where:{name:$person, kind: $animal}, kind: $animal){
+            id
+            username
+          }
+          users(where: { gender: MALE, id: 1, name: "Nic" }){
+            id
+            addesses(where: { streetType: [STREET, ROAD] }) {
+              street
+            }
+          }
+          test:users(street:[STREET, ROAD]){
+            id
+          }
+          addresses {
+            street
+            country {
+              id
+              name
+            }
+          }
+        }`
+
+        var query_filtered = `
+        query Hello($person: String, $animal: String) {
+          addresses {
+            street
+            country {
+              name
+            }
+          }
+        }`
+        var schemaAST = getSchemaAST(schema)
+        var queryAST = getQueryAST(query_input, null, schemaAST)
 
         var filteredQueryAST = queryAST.filter(a => !a.metadata || a.metadata.name != 'auth')
         
-        var query = normalizeString(query_filtered_dmqfwnd7_ehd1)
+        var query = normalizeString(query_filtered)
 
         var queryAnswer = normalizeString(buildQuery(filteredQueryAST))
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
       })))
 
-  var schema_denjk6326hius_dew2h_ = `
-  type User {
-    id: ID!
-    username: String!
-  }
-
-  type Query {
-    @auth
-    users: [User]
-  }
-
-  input UserInput {
-    name: String
-    kind: String
-  }
-
-  type Mutation {
-    @auth
-    insert(input: UserInput): User
-
-    @author
-    update(input: UserInput): User
-  }
-  `
-
-  var query_denjk6326hius_dew2h_ = `
-  query IntrospectionQuery {
-    __schema {
-      queryType { name }
-      mutationType { name }
-      subscriptionType { name }
-      types {
-        ...FullType
-      }
-      directives {
-        name
-        description
-        locations
-        args {
-          ...InputValue
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: 04 - FRAGMENTS #1', () => 
+      it('Should support queries with fragments.', () => {
+        /*eslint-enable */
+        var schema = `
+        type User {
+          id: ID!
+          username: String!
         }
-      }
-    }
-  }
 
-  fragment FullType on __Type {
-    kind
-    name
-    description
-    fields(includeDeprecated: true) {
-      name
-      description
-      args {
-        ...InputValue
-      }
-      type {
-        ...TypeRef
-      }
-      isDeprecated
-      deprecationReason
-    }
-    inputFields {
-      ...InputValue
-    }
-    interfaces {
-      ...TypeRef
-    }
-    enumValues(includeDeprecated: true) {
-      name
-      description
-      isDeprecated
-      deprecationReason
-    }
-    possibleTypes {
-      ...TypeRef
-    }
-  }
+        type Query {
+          @auth
+          users: [User]
+        }
 
-  fragment InputValue on __InputValue {
-    name
-    description
-    type { ...TypeRef }
-    defaultValue
-  }
+        input UserInput {
+          name: String
+          kind: String
+        }
 
-  fragment TypeRef on __Type {
-    kind
-    name
-    ofType {
-      kind
-      name
-      ofType {
-        kind
-        name
-        ofType {
+        type Mutation {
+          @auth
+          insert(input: UserInput): User
+
+          @author
+          update(input: UserInput): User
+        }
+        `
+
+        var query_input = `
+        query IntrospectionQuery {
+          __schema {
+            queryType { name }
+            mutationType { name }
+            subscriptionType { name }
+            types {
+              ...FullType
+            }
+            directives {
+              name
+              description
+              locations
+              args {
+                ...InputValue
+              }
+            }
+          }
+        }
+
+        fragment FullType on __Type {
+          kind
+          name
+          description
+          fields(includeDeprecated: true) {
+            name
+            description
+            args {
+              ...InputValue
+            }
+            type {
+              ...TypeRef
+            }
+            isDeprecated
+            deprecationReason
+          }
+          inputFields {
+            ...InputValue
+          }
+          interfaces {
+            ...TypeRef
+          }
+          enumValues(includeDeprecated: true) {
+            name
+            description
+            isDeprecated
+            deprecationReason
+          }
+          possibleTypes {
+            ...TypeRef
+          }
+        }
+
+        fragment InputValue on __InputValue {
+          name
+          description
+          type { ...TypeRef }
+          defaultValue
+        }
+
+        fragment TypeRef on __Type {
           kind
           name
           ofType {
@@ -1319,321 +1456,322 @@ union Details    =     PriceDetails | RacketDetails
                 ofType {
                   kind
                   name
+                  ofType {
+                    kind
+                    name
+                    ofType {
+                      kind
+                      name
+                      ofType {
+                        kind
+                        name
+                      }
+                    }
+                  }
                 }
               }
             }
           }
         }
-      }
-    }
-  }
-  `
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: FRAGMENTS #1', () => 
-      it('Should support queries with fragments.', () => {
-        /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_denjk6326hius_dew2h_)
-        var queryOpAST = getQueryAST(query_denjk6326hius_dew2h_, null, schemaAST)
+        `
+        var schemaAST = getSchemaAST(schema)
+        var queryOpAST = getQueryAST(query_input, null, schemaAST)
         var rebuiltQuery = buildQuery(queryOpAST)
 
-        var query = normalizeString(query_denjk6326hius_dew2h_)
+        var query = normalizeString(query_input)
         var queryAnswer = normalizeString(rebuiltQuery)
 
         assert.equal(queryAnswer, query, 'The rebuild query for the schema request should match the original with fragments.')
       })))
 
-  var schema_den23S1 = `
-  type User {
-    @auth
-    id: ID!
-    @auth
-    password: String
-    username: String!
-  }
-
-  type Query {
-    users: [User]
-  }
-
-  input UserInput {
-    name: String
-    kind: String
-  }
-
-  type Mutation {
-    @auth
-    insert(input: UserInput): User
-
-    @author
-    update(input: UserInput): User
-  }
-  `
-
-  var query_den23S1 = `
-  query IntrospectionQuery {
-    __schema {
-      queryType { name }
-      mutationType { name }
-      subscriptionType { name }
-      types {
-        ...FullType
-      }
-      directives {
-        name
-        description
-        locations
-        args {
-          ...InputValue
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: 05 - FRAGMENTS #2', () => 
+      it('Should support merging fragments (DEFRAG).', () => {
+        /*eslint-enable */
+        var schema = `
+        type User {
+          @auth
+          id: ID!
+          @auth
+          password: String
+          username: String!
         }
-      }
-    }
-    users{
-      ...UserConfidential
-      username
-    }
-  }
 
-  fragment UserConfidential on User {
-    id
-    password
-  }
-
-  fragment FullType on __Type {
-    fields(includeDeprecated: true) {
-      name
-      description
-    }
-    inputFields {
-      ...InputValue
-    }
-    possibleTypes {
-      ...TypeRef
-    }
-  }
-
-  fragment InputValue on __InputValue {
-    name
-    type { ...TypeRef }
-  }
-
-  fragment TypeRef on __Type {
-    kind
-    name
-  }
-  `
-
-  var query_defragged_den23S1 = `
-  query IntrospectionQuery {
-    __schema {
-      queryType { name }
-      mutationType { name }
-      subscriptionType { name }
-      types {
-        fields(includeDeprecated: true) {
-          name
-          description
+        type Query {
+          users: [User]
         }
-        inputFields {
-          name
-          type {
-            kind
-            name
+
+        input UserInput {
+          name: String
+          kind: String
+        }
+
+        type Mutation {
+          @auth
+          insert(input: UserInput): User
+
+          @author
+          update(input: UserInput): User
+        }
+        `
+
+        var query_input = `
+        query IntrospectionQuery {
+          __schema {
+            queryType { name }
+            mutationType { name }
+            subscriptionType { name }
+            types {
+              ...FullType
+            }
+            directives {
+              name
+              description
+              locations
+              args {
+                ...InputValue
+              }
+            }
+          }
+          users{
+            ...UserConfidential
+            username
           }
         }
-        possibleTypes {
+
+        fragment UserConfidential on User {
+          id
+          password
+        }
+
+        fragment FullType on __Type {
+          fields(includeDeprecated: true) {
+            name
+            description
+          }
+          inputFields {
+            ...InputValue
+          }
+          possibleTypes {
+            ...TypeRef
+          }
+        }
+
+        fragment InputValue on __InputValue {
+          name
+          type { ...TypeRef }
+        }
+
+        fragment TypeRef on __Type {
           kind
           name
         }
-      }
-      directives {
-        name
-        description
-        locations
-        args {
-          name
-          type {
-            kind
-            name
+        `
+
+        var query_defragged = `
+        query IntrospectionQuery {
+          __schema {
+            queryType { name }
+            mutationType { name }
+            subscriptionType { name }
+            types {
+              fields(includeDeprecated: true) {
+                name
+                description
+              }
+              inputFields {
+                name
+                type {
+                  kind
+                  name
+                }
+              }
+              possibleTypes {
+                kind
+                name
+              }
+            }
+            directives {
+              name
+              description
+              locations
+              args {
+                name
+                type {
+                  kind
+                  name
+                }
+              }
+            }
+          }
+          users{
+            username
           }
         }
-      }
-    }
-    users{
-      username
-    }
-  }
-  `
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: FRAGMENTS #2', () => 
-      it('Should support merging fragments (DEFRAG).', () => {
-        /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_den23S1)
-        var queryOpAST = getQueryAST(query_den23S1, null, schemaAST, { defrag: true })
+        `
+        var schemaAST = getSchemaAST(schema)
+        var queryOpAST = getQueryAST(query_input, null, schemaAST, { defrag: true })
         var filteredOpAST = queryOpAST.filter(x => !x.metadata || x.metadata.name != 'auth')
         var rebuiltQuery = buildQuery(filteredOpAST)
 
-        var query = normalizeString(query_defragged_den23S1)
+        var query = normalizeString(query_defragged)
         var queryAnswer = normalizeString(rebuiltQuery)
 
         assert.equal(queryAnswer, query, 'The rebuild query for the schema request should match the original with fragments.')
       })))
 
-  var schema_den23S1_3289gpsgp567xazaa = `
-  type User {
-    @auth
-    id: ID!
-    @auth
-    password: String
-    username: String!
-  }
-
-  type Query {
-    users: [User]
-  }
-
-  input UserInput {
-    name: String
-    kind: String
-  }
-
-  type Mutation {
-    @auth
-    insert(input: UserInput): User
-
-    @author
-    update(input: UserInput): User
-  }
-  `
-
-  var query_den23S1_3289gpsgp567xazaa = `
-  query IntrospectionQuery {
-    __schema {
-      queryType { name }
-      mutationType { name }
-      subscriptionType { name }
-      types {
-        ...FullType
-      }
-      directives {
-        name
-        description
-        locations
-        args {
-          ...InputValue
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#buildQuery: 06 - FRAGMENTS #2', () => 
+      it('Should support queries with multiple queries.', () => {
+        /*eslint-enable */
+        var schema = `
+        type User {
+          @auth
+          id: ID!
+          @auth
+          password: String
+          username: String!
         }
-      }
-    }
-    users{
-      ...UserConfidential
-      username
-    }
-  }
 
-  query Test {
-    users{
-      ...UserConfidential
-      username
-    }
-  }
-
-  fragment UserConfidential on User {
-    id
-    password
-  }
-
-  fragment FullType on __Type {
-    fields(includeDeprecated: true) {
-      name
-      description
-    }
-    inputFields {
-      ...InputValue
-    }
-    possibleTypes {
-      ...TypeRef
-    }
-  }
-
-  fragment InputValue on __InputValue {
-    name
-    type { ...TypeRef }
-  }
-
-  fragment TypeRef on __Type {
-    kind
-    name
-  }
-  `
-
-  var query_defragged_introspectionquery_den23s1_3289gpsgp567xazaa = `
-  query IntrospectionQuery {
-    __schema {
-      queryType { name }
-      mutationType { name }
-      subscriptionType { name }
-      types {
-        fields(includeDeprecated: true) {
-          name
-          description
+        type Query {
+          users: [User]
         }
-        inputFields {
-          name
-          type {
-            kind
-            name
+
+        input UserInput {
+          name: String
+          kind: String
+        }
+
+        type Mutation {
+          @auth
+          insert(input: UserInput): User
+
+          @author
+          update(input: UserInput): User
+        }
+        `
+
+        var query_input = `
+        query IntrospectionQuery {
+          __schema {
+            queryType { name }
+            mutationType { name }
+            subscriptionType { name }
+            types {
+              ...FullType
+            }
+            directives {
+              name
+              description
+              locations
+              args {
+                ...InputValue
+              }
+            }
+          }
+          users{
+            ...UserConfidential
+            username
           }
         }
-        possibleTypes {
+
+        query Test {
+          users{
+            ...UserConfidential
+            username
+          }
+        }
+
+        fragment UserConfidential on User {
+          id
+          password
+        }
+
+        fragment FullType on __Type {
+          fields(includeDeprecated: true) {
+            name
+            description
+          }
+          inputFields {
+            ...InputValue
+          }
+          possibleTypes {
+            ...TypeRef
+          }
+        }
+
+        fragment InputValue on __InputValue {
+          name
+          type { ...TypeRef }
+        }
+
+        fragment TypeRef on __Type {
           kind
           name
         }
-      }
-      directives {
-        name
-        description
-        locations
-        args {
-          name
-          type {
-            kind
-            name
+        `
+
+        var query_defragged_introspection = `
+        query IntrospectionQuery {
+          __schema {
+            queryType { name }
+            mutationType { name }
+            subscriptionType { name }
+            types {
+              fields(includeDeprecated: true) {
+                name
+                description
+              }
+              inputFields {
+                name
+                type {
+                  kind
+                  name
+                }
+              }
+              possibleTypes {
+                kind
+                name
+              }
+            }
+            directives {
+              name
+              description
+              locations
+              args {
+                name
+                type {
+                  kind
+                  name
+                }
+              }
+            }
+          }
+          users{
+            username
           }
         }
-      }
-    }
-    users{
-      username
-    }
-  }
-  `
+        `
 
-  var query_defragged_test_den23S1_3289gpsgp567xazaa = `
-  query Test {
-    users{
-      username
-    }
-  }
-  `
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: FRAGMENTS #2', () => 
-      it('Should support queries with multiple queries.', () => {
-        /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_den23S1_3289gpsgp567xazaa)
-        var queryOpASTIntrospec = getQueryAST(query_den23S1_3289gpsgp567xazaa, 'IntrospectionQuery', schemaAST, { defrag: true })
+        var query_defragged = `
+        query Test {
+          users{
+            username
+          }
+        }
+        `
+        var schemaAST = getSchemaAST(schema)
+        var queryOpASTIntrospec = getQueryAST(query_input, 'IntrospectionQuery', schemaAST, { defrag: true })
         var filteredOpASTIntrospec = queryOpASTIntrospec.filter(x => !x.metadata || x.metadata.name != 'auth')
         var rebuiltQueryIntrospec = buildQuery(filteredOpASTIntrospec)
-        var queryOpASTTest = getQueryAST(query_den23S1_3289gpsgp567xazaa, 'Test', schemaAST, { defrag: true })
+        var queryOpASTTest = getQueryAST(query_input, 'Test', schemaAST, { defrag: true })
         var filteredOpASTTest = queryOpASTTest.filter(x => !x.metadata || x.metadata.name != 'auth')
         var rebuiltQueryTest = buildQuery(filteredOpASTTest)
 
-        var query_introspec = normalizeString(query_defragged_introspectionquery_den23s1_3289gpsgp567xazaa)
-        var query_test = normalizeString(query_defragged_test_den23S1_3289gpsgp567xazaa)
+        var query_introspec = normalizeString(query_defragged_introspection)
+        var query_test = normalizeString(query_defragged)
         var queryAnswer_introspec = normalizeString(rebuiltQueryIntrospec)
         var queryAnswer_test = normalizeString(rebuiltQueryTest)
 
@@ -1641,80 +1779,78 @@ union Details    =     PriceDetails | RacketDetails
         assert.equal(queryAnswer_test, query_test, 'The rebuild test query for the schema request should match the original with fragments.')
       })))
 
-  var schema_8790hdhke3 = `
-  type Message {
-    message: String
-  }
-
-  input CredsInput {
-    token: String!
-    password: String!
-  }
-
-  type Mutation {
-    resetPasswordMutation(creds: CredsInput): Message
-  }
-  `
-
-  var query_8790hdhke3 = `
-  mutation resetPasswordMutation($token: String!, $password: String!) {
-    userResetPassword(creds: {token: $token, password: $password}) {
-      message
-      __typename
-    }
-  }
-  `
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#buildQuery: SUPPORT NON-NULLABLE FIELDS', () => 
+    describe('#buildQuery: 07 - SUPPORT NON-NULLABLE FIELDS', () => 
       it('Should support queries with multiple queries.', () => {
         /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_8790hdhke3)
-        var queryOpAST = getQueryAST(query_8790hdhke3, null, schemaAST, { defrag: true })
+        var schema = `
+        type Message {
+          message: String
+        }
+
+        input CredsInput {
+          token: String!
+          password: String!
+        }
+
+        type Mutation {
+          resetPasswordMutation(creds: CredsInput): Message
+        }
+        `
+
+        var query = `
+        mutation resetPasswordMutation($token: String!, $password: String!) {
+          userResetPassword(creds: {token: $token, password: $password}) {
+            message
+            __typename
+          }
+        }
+        `
+        var schemaAST = getSchemaAST(schema)
+        var queryOpAST = getQueryAST(query, null, schemaAST, { defrag: true })
         var rebuiltQuery = buildQuery(queryOpAST)
 
-        assert.equal(normalizeString(rebuiltQuery), normalizeString(query_8790hdhke3))
+        assert.equal(normalizeString(rebuiltQuery), normalizeString(query))
       })))
-
-  var schema_0987dcds12 = `
-  type Message {
-    message: String
-  }
-
-  input InputWhere {
-    name: String
-    locations: [LocationInput]
-  }
-
-  input LocationInput {
-    type: String 
-    value: String
-  }
-
-  type Query {
-    properties(where: InputWhere): Message
-  }
-  `
-
-  var query_0987dcds12 = `
-  query{
-    properties(where: { name: "Love", locations: [{ type: "house", value: "Bellevue hill" }] }){
-      message
-    }
-  }
-  `
 
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#buildQuery: SUPPORT INPUT WITH ARRAY VALUES', () => 
+    describe('#buildQuery: 08 - SUPPORT INPUT WITH ARRAY VALUES', () => 
       it('Should support input with array values.', () => {
         /*eslint-enable */
-        var schemaAST = getSchemaAST(schema_0987dcds12)
-        var queryOpAST = getQueryAST(query_0987dcds12, null, schemaAST, { defrag: true })
+        var schema = `
+        type Message {
+          message: String
+        }
+
+        input InputWhere {
+          name: String
+          locations: [LocationInput]
+        }
+
+        input LocationInput {
+          type: String 
+          value: String
+        }
+
+        type Query {
+          properties(where: InputWhere): Message
+        }
+        `
+
+        var query = `
+        query{
+          properties(where: { name: "Love", locations: [{ type: "house", value: "Bellevue hill" }] }){
+            message
+          }
+        }
+        `
+        var schemaAST = getSchemaAST(schema)
+        var queryOpAST = getQueryAST(query, null, schemaAST, { defrag: true })
         var rebuiltQuery = buildQuery(queryOpAST)
 
-        assert.equal(normalizeString(rebuiltQuery), normalizeString(query_0987dcds12))
+        assert.equal(normalizeString(rebuiltQuery), normalizeString(query))
       })))
 } 
 
