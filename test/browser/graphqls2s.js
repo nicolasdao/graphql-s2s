@@ -89,6 +89,7 @@ var runtest = function(s2s, assert) {
   describe('graphqls2s', () => 
     describe('#transpileSchema: 01 - BASICS', () => 
       it('Should not affect a standard schema after transpilation.', () => {
+        /*eslint-enable */
         var output = transpileSchema(schema_input_vndfis)
         var answer = compressString(output)
         var correct = compressString(schema_output_vndfis)
@@ -131,6 +132,7 @@ var runtest = function(s2s, assert) {
     // - Raised by: kaihaase-wd 
     describe('#transpileSchema: 02 - SUPPORT THE EXTEND KEYWORD', () => 
       it(`Should support extending schema using the 'extend' keyword.`, () => {
+        /*eslint-enable */
         var output = transpileSchema(schema_input_vnwdvs)
         var answer = compressString(output)
         var correct = compressString(schema_output_vnwdvs)
@@ -560,7 +562,185 @@ var runtest = function(s2s, assert) {
         `
 
         var output = transpileSchema(schema)
-        //console.log(output)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+
+        // More complicated test
+        
+        var schema_01 = `
+        type AnotherDeeperGeneric<T> {
+          data: T
+        }
+
+        type StandardData<T> {
+          id: ID!
+          value: T
+          magic: AnotherDeeperGeneric<T>
+        }
+
+        type Paged<T> {
+          data: [StandardData<T>]
+          cursor: ID
+        }
+
+        type User {
+          posts: Paged<Post>
+        }
+        `
+        var schema_output_01 = `
+        type User {
+          posts: PagedPost
+        }
+
+        type AnotherDeeperGenericPost {
+          data: Post
+        }
+
+        type StandardDataPost {
+          id: ID!
+          value: Post
+          magic: AnotherDeeperGenericPost
+        }
+
+        type PagedPost {
+          data: [StandardDataPost]
+          cursor: ID
+        }`
+
+        var output_01 = transpileSchema(schema_01)
+        var answer_01 = compressString(output_01)
+        var correct_01 = compressString(schema_output_01)
+        assert.equal(answer_01,correct_01)
+      })))
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#transpileSchema: 12 - NESTED REQUIRED GENERIC TYPES', () => 
+      it('Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
+        /*eslint-enable */
+
+        var schema = `
+        type StandardData<T> {
+          id: ID!
+          value: T
+        }
+
+        type Paged<T> {
+          data: [StandardData<T>]!
+          cursor: ID
+        }
+
+        type User {
+          posts: Paged<Post>!
+        }
+        `
+        var schema_output = `
+        type User {
+          posts: PagedPost!
+        }
+
+        type StandardDataPost {
+          id: ID!
+          value: Post
+        }
+
+        type PagedPost {
+          data: [StandardDataPost]!
+          cursor: ID
+        }
+        `
+
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })))
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#transpileSchema: 13 - ALIASES SUPPORT FOR NESTED GENERIC TYPES WITH THE @alias METADATA', () => 
+      it('Should allow to define custom names in nested generic types', () => {
+        /*eslint-enable */
+        var schema = `
+        @alias((T) => 'Standard' + T)
+        type StandardData<T> {
+          id: ID!
+          value: T
+        }
+
+        @alias((T) => T + 's')
+        type Paged<T> {
+          data: [StandardData<T  >]
+          cursor: ID
+        }
+
+        type User {
+          posts: Paged<Post  >
+        }
+        `
+        var schema_output = `
+        type User {
+          posts: Posts
+        }
+
+        type StandardPost {
+          id: ID!
+          value: Post
+        }
+
+        type Posts {
+          data: [StandardPost]
+          cursor: ID
+        }
+        `
+
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })))
+
+  /*eslint-disable */
+  describe('graphqls2s', () => 
+    describe('#transpileSchema: 14 - NESTED GENERIC TYPES WITH MULTI TYPES', () => 
+      it('Should create a new type for each instance of a generic type, even for generic with multi-types, as well as removing the original generic type definition.', () => {
+        /*eslint-enable */
+
+        var schema = `
+        type StandardData<T,U> {
+          id: ID!
+          value: T
+          Dimension: U
+        }
+
+        type Paged<T,U> {
+          data: [StandardData< T, U>]
+          cursor: ID
+        }
+
+        type User {
+          posts: Paged<Post, Date>
+        }
+        `
+        var schema_output = `
+        type User {
+          posts: PagedPostDate
+        }
+
+        type StandardDataPostDate {
+          id: ID!
+          value: Post
+          Dimension: Date
+        }
+
+        type PagedPostDate {
+          data: [StandardDataPostDate]
+          cursor: ID
+        }
+        `
+
+        var output = transpileSchema(schema)
         var answer = compressString(output)
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
@@ -572,6 +752,8 @@ var runtest = function(s2s, assert) {
       it('Should test whether or not a type is a generic type based on predefined type constraints.', () => {
         /*eslint-enable */
 
+        assert.isOk(isTypeGeneric('T', 'T'), '\'T\', \'T\' should work.')
+        assert.isOk(isTypeGeneric('T', 'T,U'), '\'T\', \'T,U\' should work.')
         assert.isOk(isTypeGeneric('Paged<T>', 'T'), '\'Paged<T>\', \'T\' should work.')
         assert.isOk(isTypeGeneric('[T]', 'T'), '\'[T]\', \'T\' should work.')
         assert.isOk(isTypeGeneric('[Paged<T>]', 'T'), '\'[Paged<T>]\', \'T\' should work.')
@@ -858,8 +1040,8 @@ var runtest = function(s2s, assert) {
         var queryOpAST = getQueryAST(query, null, schemaAST)
         var mutationOpAST = getQueryAST(mutation, null, schemaAST)
 
-        const queryAST = queryOpAST.properties
-        const mutationAST = mutationOpAST.properties
+        var queryAST = queryOpAST.properties
+        var mutationAST = mutationOpAST.properties
 
         assert.equal(queryOpAST.type, 'query', 'Operation type should be \'query\'')
         assert.equal(queryOpAST.name, 'Hello', 'Operation name should be \'Hello\'')
@@ -1011,7 +1193,7 @@ var runtest = function(s2s, assert) {
     describe('#getQueryAST: 04 - BASIC TYPES SUPPORT', () => 
       it('Should support queries with for basic types (id, string, int, boolean, float).', () => {
         /*eslint-enable */
-        const schema = `
+        var schema = `
         type Property {
           inspectionSchedule: InspectionSchedule
         }
@@ -1039,7 +1221,7 @@ var runtest = function(s2s, assert) {
           properties(paging: DirectionalPagingInput): [Property]
         }`
 
-      const query_input = `query {
+      var query_input = `query {
         properties (paging: { limit: 10 }) {
           inspectionSchedule {
             id

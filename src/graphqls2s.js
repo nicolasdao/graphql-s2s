@@ -139,19 +139,53 @@ const genericDefaultNameAlias = genName => {
 
 /**
  * Example: [T] -> [User], or T -> User or Toy<T> -> Toy<User>
- * @param  {string} genericType   e.g. Toy<T>
- * @param  {string} genericLetter e.g. T
- * @param  {string} concreteType  e.g. User
- * @return {string}               e.g. Toy<User>
+ * @param  {string} genericType   	e.g. 'Toy<T>', 'Toy<T,U>'
+ * @param  {array}  genericLetters 	e.g. ['T'], ['T','U']
+ * @param  {string} concreteType  	e.g. 'User', 'User,Product'
+ * @return {string}               	e.g. 'Toy<User>', 'Toy<User,Product>'
  */
-const replaceGenericWithType = (genericType, genericLetter, concreteType) => 
-	chain({ gType: genericType.trim(), gLetter: genericLetter.trim(), cType: concreteType.trim() })
-	.next(({ gType, gLetter, cType }) => 
-		gType == gLetter ? cType :
-		gType.indexOf('[') == 0 && gType.indexOf(']') > 0  ? `[${gType.match(/\[(.*?)\]/)[1].replace(genericLetter, concreteType)}]` :
-		gType.indexOf('<') > 0 && gType.indexOf('>') > 0  ? chain(gType.match(/(.*?)<(.*?)>/)).next(match => `${match[1]}<${match[2].replace(genericLetter, concreteType)}>`).val() : 
-		(() => { throw new Error(`Schema error: Cannot replace generic type '${gLetter}' of generic object '${gType}' with type '${cType}'`) })()
-	)
+const replaceGenericWithType = (genericType, genericLetters, concreteType) => 
+	chain({ gType: genericType.trim(), gLetters: genericLetters.map(x => x.trim()), cTypes: concreteType.split(',').map(x => x.trim()) })
+	.next(({ gType, gLetters, cTypes }) => {
+		const cTypesLength = cTypes.length
+		const genericTypeIsArray = gType.indexOf('[') == 0 && gType.indexOf(']') > 0
+		const endingChar = gType.match(/!$/) ? '!' : ''
+		if (gLetters.length != cTypesLength)
+			throw new Error(`Invalid argument exception. Mismatch between the number of types in 'genericLetters' (${genericLetters.join(',')}) and 'concreteType' (${concreteType}).`)		
+		// e.g. genericType = 'T', genericLetters = ['T'], concreteType = 'User' -> resp = 'User'
+		if (gLetters.length == 1 && gType == gLetters[0]) 
+			return `${cTypes[0]}${endingChar}`
+		// e.g. genericType = 'Paged<T>' or '[Paged<T>]'
+		else if (gType.indexOf('<') > 0 && gType.indexOf('>') > 0) {
+			const type = genericTypeIsArray ? gType.match(/\[(.*?)\]/)[1] : gType
+			const typeName = type.match(/.*</)[0].replace(/<$/,'').trim() // e.g. 'Toy'
+			const types = type.match(/<(.*?)>/)[1].split(',').map(x => x.trim())
+			if (types.length != gLetters.length)
+				throw new Error(`Invalid argument exception. Mismatch between the number of types in 'genericLetters' (${genericLetters.join(',')}) and 'genericType' (${genericType}).`)
+
+			const matchingConcreteTypes = types.map(t => {
+				for(let i=0;i<cTypesLength;i++) {
+					if (gLetters[i] == t)
+						return cTypes[i]
+				}
+				throw new Error(`Invalid argument exception. Mismatch types between the 'genericType' (${genericType}) and the allowed types 'genericLetters' (${genericLetters.join(',')}).`)
+			})
+			const result = `${typeName}<${matchingConcreteTypes.join(',')}>`
+
+			return genericTypeIsArray ? `[${result}]${endingChar}` : `${result}${endingChar}`
+		} else { // e.g. genericType = 'T' or '[T]'
+			const type = genericTypeIsArray ? gType.match(/\[(.*?)\]/)[1] : gType
+			const matchingConcreteTypes = type.split(',').map(t => {
+				for(let i=0;i<cTypesLength;i++) {
+					if (gLetters[i] == t.trim())
+						return cTypes[i]
+				}
+				throw new Error(`Invalid argument exception. Mismatch types between the 'genericType' (${genericType}) and the allowed types 'genericLetters' (${genericLetters.join(',')}).`)
+			})
+			const result = matchingConcreteTypes.join(',')
+			return genericTypeIsArray ? `[${result}]${endingChar}` : `${result}${endingChar}`
+		}
+	})
 	.val()
 
 let memoizedGenericNameAliases = {}
@@ -193,6 +227,7 @@ const getTypeDetails = (t, metadata, genericParentTypes) => chain((t.match(GENER
 		const isGen = genTypes ? true : false
 		const genericTypes = isGen ? genTypes.split(',').map(x => x.trim()) : null
 		const originName = t
+		const endingChar = t.match(/!$/) ? '!' : ''
 		const dependsOnParent = isGen && genericParentTypes && genericParentTypes.length > 0 && genericTypes.some(x => genericParentTypes.some(y => x == y))
 		return { 
 			originName, 
@@ -200,7 +235,7 @@ const getTypeDetails = (t, metadata, genericParentTypes) => chain((t.match(GENER
 			dependsOnParent,
 			metadata,
 			genericParentTypes,
-			name: isGen && !dependsOnParent ? getAliasName(originName, metadata) : t 
+			name: isGen && !dependsOnParent ? `${getAliasName(originName, metadata)}${endingChar}` : t 
 		}
 	})
 	.next(result => {
@@ -457,7 +492,7 @@ const addComments = (obj, comments) => {
 const parseSchemaObjToString = (comments, type, name, _implements, blockProps, extend=false) => 
 	[
 		`${comments && comments != '' ? `\n${comments}` : ''}`, 
-		`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} ${blockProps.some(x => x) ? '{': ''} `,
+		`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name.replace('!', '')}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} ${blockProps.some(x => x) ? '{': ''} `,
 		blockProps.map(prop => `    ${prop.comments != '' ? `${prop.comments}\n    ` : ''}${prop.value}`).join('\n'),
 		blockProps.some(x => x) ? '}': ''
 	].filter(x => x).join('\n')
@@ -465,25 +500,23 @@ const parseSchemaObjToString = (comments, type, name, _implements, blockProps, e
 /**
  * Tests if the type is a generic type based on the value of genericLetter
  * 
- * @param  {String} type          e.g. Paged<T>, [T]
- * @param  {String} genericLetter e.g. T
+ * @param  {String} type          e.g. 'Paged<T>', '[T]', 'T'
+ * @param  {String} genericLetter e.g. 'T', 'T,U'
  * @return {Boolean}              e.g. if type equals 'Paged<T>' or '[T]' and genericLetter equals 'T' then true.
  */
 const isTypeGeneric = (type, genericLetter) => {
-	const sanitizedType = type ? type.replace(/^\[|\]$/g, '') : type
-	if (!sanitizedType || !genericLetter)
+	const sanitizedType = type ? type.replace(/^\[|\s|\]$/g, '') : type
+	const sanitizedgenericLetter = genericLetter ? genericLetter.replace(/^\[|\s|\]$/g, '') : genericLetter
+	if (!sanitizedType || !sanitizedgenericLetter)
 		return false
-	else if (sanitizedType == genericLetter)
+	else if (sanitizedType == sanitizedgenericLetter)
 		return true
-	else if (sanitizedType.indexOf('<') > 0 && sanitizedType.indexOf('>') > 0) 
-		return (sanitizedType.match(/<(.*?)>/) || [null, ''])[1].split(',').some(x => x.trim() == genericLetter)
+	else if (sanitizedType.indexOf('<') > 0 && sanitizedType.indexOf('>') > 0) {
+		const genericLetters = sanitizedgenericLetter.split(',')
+		return (sanitizedType.match(/<(.*?)>/) || [null, ''])[1].split(',').some(x => genericLetters.some(y => y == x.trim()))
+	}
 	else
-		return false
-	// return !type || !genericLetter ? false :
-	// type == genericLetter ? true :
-	// type.indexOf('[') == 0 && type.indexOf(']') > 0 ? _(type.match(/\[(.*?)\]/)[1].split(',')).some(x => x.trim() == genericLetter) :
-	// type.indexOf('<') > 0 && type.indexOf('>') > 0 ? _(type.match(/<(.*?)>/)[1].split(',')).some(x => x.trim() == genericLetter) :
-	// false
+		return sanitizedgenericLetter.split(',').some(x => x.trim() == sanitizedType)
 }
 
 const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBreakDown, memoizedNewSchemaObjectFromGeneric) => {
@@ -508,14 +541,17 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 					result: {
 						originName: prop.details.originName,
 						isGen: prop.details.isGen,
-						name: replaceGenericWithType(prop.details.result.name, baseGenObj.genericType, concreteType)
+						name: replaceGenericWithType(prop.details.result.name, baseGenObj.genericType.split(','), concreteType)
 					} 
 				}
 				if (prop.details.result.dependsOnParent) {
-					const propTypeIsArray = prop.details.result.name.match(/^\[.*\]$/)
+					const propTypeIsRequired = prop.details.result.name.match(/!$/)
 					// e.g. [Paged<T>]
-					const originalConcretePropType = replaceGenericWithType(prop.details.result.name, prop.details.result.genericParentTypes[0], concreteType)
-					// e.g. Paged<T>
+					const propTypeName = propTypeIsRequired ? prop.details.result.name.replace(/!$/,'') : prop.details.result.name
+					const propTypeIsArray = propTypeName.match(/^\[.*\]$/)
+					// e.g. [Paged<Product>]
+					const originalConcretePropType = replaceGenericWithType(propTypeName, prop.details.result.genericParentTypes, concreteType)
+					// e.g. Paged<Product>
 					const concretePropType = propTypeIsArray ? originalConcretePropType.replace(/^\[|\]$/g,'') : originalConcretePropType
 					const concreteGenProp = getTypeDetails(concretePropType, prop.details.result.metadata)
 					// e.g. PagedProduct
@@ -526,7 +562,7 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 					details.result = {
 						originName: prop.details.result.name,
 						isGen: true,
-						name: originalConcretePropTypeName
+						name: originalConcretePropTypeName + (propTypeIsRequired ? '!' : '')
 					} 
 				}
 
