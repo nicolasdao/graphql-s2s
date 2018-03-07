@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.13.0"></a>
+# [0.13.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.12.1...v0.13.0) (2018-03-07)
+
+
+### Features
+
+* Add support for generic typing with more than one type ([4d2106e](https://github.com/nicolasdao/graphql-s2s/commit/4d2106e))
+
+
+
 <a name="0.12.1"></a>
 ## [0.12.1](https://github.com/nicolasdao/graphql-s2s/compare/v0.12.0...v0.12.1) (2018-03-07)
 
