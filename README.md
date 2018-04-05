@@ -71,6 +71,9 @@ const executableSchema = makeExecutableSchema({
 ```
 
 [**Type Inheritance**](#type-inheritance)
+
+## Single Inheritance
+
 ```js
 const schema = `
 type Node {
@@ -87,6 +90,34 @@ type Person inherits Node {
 type Student inherits Person {
 	nickname: String
 }
+`
+```
+
+## Multiple Inheritance
+
+```js
+const schema = `
+
+type Node {
+	id: ID!
+}
+
+type Address {
+	streetAddress: String
+	city: String
+	state: String
+}
+
+# Inheriting from the 'Node' & 'Adress' type
+type Person inherits Node, Address {
+	id: ID!
+	streetAddress: String
+	city: String
+	state: String
+	firstname: String
+	lastname: String
+}
+
 `
 ```
 
