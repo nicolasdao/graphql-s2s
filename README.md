@@ -638,19 +638,22 @@ __*buildQuery(QueryAST): String*__
 Rebuilds a valid GraphQl query from a QueryAST object.
 
 # Contribute
-This project is built using Javascript ES6. Each version is also transpiled to ES5 using Babel through Webpack 2, so this project can run in the browser. In order to write unit test only once instead of duplicating it for each version of Javascript, the all unit tests have been written using Javascript ES5 in mocha. That means that if you want to test the project after some changes, you will need to first transpile the project to ES5. This can be done simply by running the following command:
+## Step 1. Don't Forget To Test Your Feature
+We only accept pull request that have been thoroughly tested. To do so, simply add your test under the `test/browser/graphqls2s.js` file. 
 
-```
-npm run dev
-npm test
-```
-
-If you want to test the code without transpiling it, I've added a variant:
-
+Once that's done, simply run your the following command to test your features:
 ```
 npm run test:dev
 ```
 This sets an environment variable that configure the project to load the main dependency from the _src_ folder (source code in ES6) instead of the _lib_ folder (transpiled ES5 code). 
+
+## Step 2. Compile & Rerun Your Test Before Pushing
+```
+npm run dev
+npm run built
+npm test
+```
+This project is built using Javascript ES6. Each version is also transpiled to ES5 using Babel through Webpack 2, so this project can run in the browser. In order to write unit test only once instead of duplicating it for each version of Javascript, the all unit tests have been written using Javascript ES5 in mocha. That means that if you want to test the project after some changes, you will need to first transpile the project to ES5. 
 
 # This Is What We re Up To
 We are Neap, an Australian Technology consultancy powering the startup ecosystem in Sydney. We simply love building Tech and also meeting new people, so don't hesitate to connect with us at [https://neap.co](https://neap.co).
