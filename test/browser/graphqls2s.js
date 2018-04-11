@@ -31,7 +31,7 @@ var runtest = function(s2s, assert) {
   /*eslint-disable */
   describe('graphqls2s', () => 
     describe('#getGenericAlias', () => 
-      it('Should .', () => {
+      it('Should alias generics using custom rules.', () => {
         /*eslint-enable */
         var func = '(T => T + "s")'
         var genericType = 'Paged<Product>'
@@ -55,329 +55,156 @@ var runtest = function(s2s, assert) {
         assert.equal(alias_4,'PagedProductUser')
       })))
 
-  var schema_input_vndfis = `
-  # This is some description of 
-  # what a Post object is.
-  type Post {
-    id: ID! 
-    # A name is a property.
-    name: String!
-  }
-
-  type PostUserRating {
-    # Rating indicates the rating a user gave 
-    # to a post.
-    rating: PostRating!
-  }`
-
-  var schema_output_vndfis = `
-  # This is some description of 
-  # what a Post object is.
-  type Post {
-    id: ID! 
-    # A name is a property.
-    name: String!
-  }
-
-  type PostUserRating {
-    # Rating indicates the rating a user gave 
-    # to a post.
-    rating: PostRating!
-  }`
-
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#transpileSchema: 01 - BASICS', () => 
-      it('Should not affect a standard schema after transpilation.', () => {
+    describe('#transpileSchema', () => {
+      it('01 - BASICS: Should not affect a standard schema after transpilation.', () => {
         /*eslint-enable */
-        var output = transpileSchema(schema_input_vndfis)
+        var output = transpileSchema(`
+        # This is some description of 
+        # what a Post object is.
+        type Post {
+          id: ID! 
+          # A name is a property.
+          name: String!
+        }
+
+        type PostUserRating {
+          # Rating indicates the rating a user gave 
+          # to a post.
+          rating: PostRating!
+        }`)
         var answer = compressString(output)
-        var correct = compressString(schema_output_vndfis)
-        assert.equal(answer,correct)
-      })))
+        var correct = compressString(`
+        # This is some description of 
+        # what a Post object is.
+        type Post {
+          id: ID! 
+          # A name is a property.
+          name: String!
+        }
 
-  var schema_input_vnwdvs = `
-  type Query {
-    bars: [Bar]!
-  }
-  type Bar {
-    id: ID
-  }
-  type Foo {
-    id: String!
-  }
-  extend    type Query {
-    foos: [Foo]!
-  }`
-  
-  var schema_output_vnwdvs = `
-  type Query {
-    bars: [Bar]!
-  }
-  type Bar {
-    id: ID
-  }
-  type Foo {
-    id: String!
-  }
-  extend type Query {
-    foos: [Foo]!
-  }`
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    // This was added on the 28th of Oct following a reported bug that the 'extend' keyword was erased after the transpiled operation.
-    // Ref: 
-    // - Name: The keyword "extend" is lost #1
-    // - Raised by: kaihaase-wd 
-    describe('#transpileSchema: 02 - SUPPORT THE EXTEND KEYWORD', () => 
-      it(`Should support extending schema using the 'extend' keyword.`, () => {
-        /*eslint-enable */
-        var output = transpileSchema(schema_input_vnwdvs)
-        var answer = compressString(output)
-        var correct = compressString(schema_output_vnwdvs)
-        assert.equal(answer,correct)
-      })))
-
-  var schema_input_1 = `
-  type Post {
-    id: ID! 
-    name: String!
-  }
-  type PostUserRating inherits Post {
-    rating: PostRating!
-  }
-  `
-  var schema_inheritance_1 = `
-  type Name {  
-    name: String! 
-  } 
-  type Author { 
-    author: String! 
-  }
-  type PostUserRating inherits Name,Author {
-    rating: String!
-  }`
-
-  var schema_inheritance_missingtype = `
-  type Name {  
-    name: String! 
-  }
-  type PostUserRating inherits Name,Author {
-    rating: String!
-  }`
-
-  var schema_incorrect_inheritance = `
-  interface Name {  
-    name: String! 
-  }
-  type PostUserRating inherits Name {
-    rating: String!
-  }`
-
-  var schema_inheritance_implements_1 = `
-  interface Node  {  
-    id: Int! 
-  } 
-  type Name {  
-    name: String! 
-  } 
-  type Author { 
-    author: String! 
-  }
-  type PostUserRating inherits Name,Author implements Node {
-    id: Int!
-    rating: String!
-  }`
-
-  var schema_output_1 = `
-  type Post {
-      id: ID!
-      name: String!
-  }
-
-  type PostUserRating {
-      id: ID!
-      name: String!
-      rating: PostRating!
-  }
-  `
-
-  var schema_inheritance_output_1 = `
-  type Name { 
-    name: String! 
-  }
-  type Author { 
-    author: String! 
-  }
-  type PostUserRating {
-    name: String! 
-    author: String! 
-    rating: String!
-  }`
-
-  var schema_inheritance_implements_output_1 = `
-  interface Node {
-    id:Int!
-  }
-  type Name { 
-    name: String! 
-  }
-  type Author { 
-    author: String! 
-  }
-  type PostUserRating implements Node {
-    name: String! 
-    author: String! 
-    id: Int! 
-    rating: String!
-  }`
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 03 - INHERITANCE', () => {
-      it('Should add properties from the super type to the sub type.', () => {
-        /*eslint-enable */
-        var output = transpileSchema(schema_input_1)
-        var answer = compressString(output)
-        var correct = compressString(schema_output_1)
+        type PostUserRating {
+          # Rating indicates the rating a user gave 
+          # to a post.
+          rating: PostRating!
+        }`)
         assert.equal(answer,correct)
       })
-      it('Should support multiple inheritance type.', () => {
+      it(`02 - SUPPORT THE EXTEND KEYWORD: Should support extending schema using the 'extend' keyword.`, () => {
         /*eslint-enable */
-        var output = transpileSchema(schema_inheritance_1)
+        var output = transpileSchema(`
+        type Query {
+          bars: [Bar]!
+        }
+        type Bar {
+          id: ID
+        }
+        type Foo {
+          id: String!
+        }
+        extend    type Query {
+          foos: [Foo]!
+        }`)
         var answer = compressString(output)
-        var correct = compressString(schema_inheritance_output_1)
+        var correct = compressString(`
+        type Query {
+          bars: [Bar]!
+        }
+        type Bar {
+          id: ID
+        }
+        type Foo {
+          id: String!
+        }
+        extend type Query {
+          foos: [Foo]!
+        }`)
         assert.equal(answer,correct)
       })
-      it('Should support multiple inheritance type with implements interface.', () => {
+      it('03 - COMMENTED INHERITANCE: Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
         /*eslint-enable */
-        var output = transpileSchema(schema_inheritance_implements_1)
+        var output = transpileSchema(`
+        type Person {
+          firstname: String
+          lastname: String
+        }
+
+        type User { #inherits Person {
+          username: String!
+          posts: [Post]
+        }
+        `)
         var answer = compressString(output)
-        var correct = compressString(schema_inheritance_implements_output_1)
+        var correct = compressString(`
+        type Person {
+          firstname: String
+          lastname: String
+        }
+
+        type User {
+            #inherits Person {
+            username: String!
+            posts: [Post]
+        }
+        `)
         assert.equal(answer,correct)
       })
-      it('Should throw an error if inherited type is missing.', () => {
+      it('04 - GENERIC TYPES: Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
         /*eslint-enable */
-        assert.throws(() => 
-          transpileSchema(schema_inheritance_missingtype), 
-          "Schema error: type PostUserRating cannot find inherited type Author"
-        )
+        var output = transpileSchema(`
+        type Paged<T> {
+          data: [T]
+          cursor: ID
+        }
+
+        type User {
+          posts: Paged<Post>
+        }
+        `)
+        var answer = compressString(output)
+        var correct = compressString(`
+        type User {
+          posts: PagedPost
+        }
+        type PagedPost {
+          data: [Post]
+          cursor: ID
+        }
+        `)
+        assert.equal(answer,correct)
       })
-      it('Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'".', () => {
+      it('05 - REMOVE METADATA: Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
         /*eslint-enable */
-        assert.throws(() => 
-          transpileSchema(schema_incorrect_inheritance),
-          "Schema error: type PostUserRating cannot inherit from INTERFACE Name. A type can only inherit from another type"
-        )
+        var output = transpileSchema(`
+        @node
+        type Brand {
+          id: ID!
+          name: String
+          @edge('<-[ABOUT]-')
+          posts: [Post]
+        }
+
+        @miracle
+        input User {
+          posts: [Post]
+        }
+        `)
+        var answer = compressString(output)
+        var correct = compressString(`
+        type Brand {
+          id: ID!
+          name: String
+          posts: [Post]
+        }
+
+        input User {
+          posts: [Post]
+        }
+        `)
+        assert.equal(answer,correct)
       })
-    })
-  )
-
-  var schema_input_xdwe3d = `
-  type Person {
-    firstname: String
-    lastname: String
-  }
-
-  type User { #inherits Person {
-    username: String!
-    posts: [Post]
-  }
-  `
-  var schema_output_xdwe3d = `
-  type Person {
-    firstname: String
-    lastname: String
-  }
-
-  type User {
-      #inherits Person {
-      username: String!
-      posts: [Post]
-  }
-  `
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 04 - COMMENTED INHERITANCE', () => 
-      it('Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
-        /*eslint-enable */
-        var output = transpileSchema(schema_input_xdwe3d)
-        var answer = compressString(output)
-        var correct = compressString(schema_output_xdwe3d)
-        assert.equal(answer,correct)
-      })))
-
-  var schema_input_2 = `
-  type Paged<T> {
-    data: [T]
-    cursor: ID
-  }
-
-  type User {
-    posts: Paged<Post>
-  }
-  `
-  var schema_output_2 = `
-  type User {
-    posts: PagedPost
-  }
-  type PagedPost {
-    data: [Post]
-    cursor: ID
-  }
-  `
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 05 - GENERIC TYPES', () => 
-      it('Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
-        /*eslint-enable */
-        var output = transpileSchema(schema_input_2)
-        var answer = compressString(output)
-        var correct = compressString(schema_output_2)
-        assert.equal(answer,correct)
-      })))
-
-  var schema_input_3 = `
-  @node
-  type Brand {
-    id: ID!
-    name: String
-    @edge('<-[ABOUT]-')
-    posts: [Post]
-  }
-
-  @miracle
-  input User {
-    posts: [Post]
-  }
-  `
-  var schema_output_3 = `
-  type Brand {
-    id: ID!
-    name: String
-    posts: [Post]
-  }
-
-  input User {
-    posts: [Post]
-  }
-  `
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 06 - REMOVE METADATA', () => 
-      it('Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
-        /*eslint-enable */
-        var output = transpileSchema(schema_input_3)
-        var answer = compressString(output)
-        var correct = compressString(schema_output_3)
-        assert.equal(answer,correct)
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 07 - ALIASES SUPPORT FOR GENERIC TYPES WITH THE @alias METADATA', () => 
-      it('Should allow to define custom names in generic types', () => {
+      it('06 - ALIASES SUPPORT FOR GENERIC TYPES WITH THE @alias METADATA: Should allow to define custom names in generic types', () => {
         /*eslint-enable */
         var schema = `
         type Brand {
@@ -406,12 +233,8 @@ var runtest = function(s2s, assert) {
         var answer = compressString(output)
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 08 - COMPLEX COMMENTS WITH MARKDOWN CODE BLOCKS', () => 
-      it('Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
+      })
+      it('07 - COMPLEX COMMENTS WITH MARKDOWN CODE BLOCKS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
         /*eslint-enable */
         var schema = `
         # ### Page - Pagination Metadata
@@ -505,12 +328,8 @@ var runtest = function(s2s, assert) {
         var answer = compressString(output)
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 09 - SUPPORT FOR SCALAR', () => 
-      it('Should support custom scalar types.', () => {
+      })
+      it('08 - SUPPORT FOR SCALAR: Should support custom scalar types.', () => {
         /*eslint-enable */
         var schema_input = `scalar Date
       scalar Like
@@ -562,12 +381,8 @@ var runtest = function(s2s, assert) {
         var answer = compressString(output)
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 10 - SUPPORT FOR UNION', () => 
-      it('Should support union types.', () => {
+      })
+      it('09 - SUPPORT FOR UNION: Should support union types.', () => {
         /*eslint-enable */
         var schema = `scalar Date
       scalar Like
@@ -624,12 +439,8 @@ var runtest = function(s2s, assert) {
         var answer = compressString(output)
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 11 - NESTED GENERIC TYPES', () => 
-      it('Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
+      })
+      it('10 - NESTED GENERIC TYPES: Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
         /*eslint-enable */
 
         var schema = `
@@ -714,12 +525,8 @@ var runtest = function(s2s, assert) {
         var answer_01 = compressString(output_01)
         var correct_01 = compressString(schema_output_01)
         assert.equal(answer_01,correct_01)
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 12 - NESTED REQUIRED GENERIC TYPES', () => 
-      it('Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
+      })
+      it('11 - NESTED REQUIRED GENERIC TYPES: Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
         /*eslint-enable */
 
         var schema = `
@@ -757,12 +564,8 @@ var runtest = function(s2s, assert) {
         var answer = compressString(output)
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 13 - ALIASES SUPPORT FOR NESTED GENERIC TYPES WITH THE @alias METADATA', () => 
-      it('Should allow to define custom names in nested generic types', () => {
+      })
+      it('12 - ALIASES SUPPORT FOR NESTED GENERIC TYPES WITH THE @alias METADATA: Should allow to define custom names in nested generic types', () => {
         /*eslint-enable */
         var schema = `
         @alias((T) => 'Standard' + T)
@@ -801,12 +604,8 @@ var runtest = function(s2s, assert) {
         var answer = compressString(output)
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#transpileSchema: 14 - NESTED GENERIC TYPES WITH MULTI TYPES', () => 
-      it('Should create a new type for each instance of a generic type, even for generic with multi-types, as well as removing the original generic type definition.', () => {
+      })
+      it('13 - NESTED GENERIC TYPES WITH MULTI TYPES: Should create a new type for each instance of a generic type, even for generic with multi-types, as well as removing the original generic type definition.', () => {
         /*eslint-enable */
 
         var schema = `
@@ -846,7 +645,124 @@ var runtest = function(s2s, assert) {
         var answer = compressString(output)
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
-      })))
+      })
+      describe('14 - INHERITANCE:', () => {
+        it('01: Should add properties from the super type to the sub type.', () => {
+          /*eslint-enable */
+          var output = transpileSchema(`
+          type Post {
+            id: ID! 
+            name: String!
+          }
+          type PostUserRating inherits Post {
+            rating: PostRating!
+          }
+          `)
+          var answer = compressString(output)
+          var correct = compressString(`
+          type Post {
+              id: ID!
+              name: String!
+          }
+
+          type PostUserRating {
+              id: ID!
+              name: String!
+              rating: PostRating!
+          }
+          `)
+          assert.equal(answer,correct)
+        })
+        it('02: Should support multiple inheritance type.', () => {
+          /*eslint-enable */
+          var output = transpileSchema(`
+          type Name {  
+            name: String! 
+          } 
+          type Author { 
+            author: String! 
+          }
+          type PostUserRating inherits Name,Author {
+            rating: String!
+          }`)
+          var answer = compressString(output)
+          var correct = compressString(`
+          type Name { 
+            name: String! 
+          }
+          type Author { 
+            author: String! 
+          }
+          type PostUserRating {
+            name: String! 
+            author: String! 
+            rating: String!
+          }`)
+          assert.equal(answer,correct)
+        })
+        it('03: Should support multiple inheritance type with implements interface.', () => {
+          /*eslint-enable */
+          var output = transpileSchema(`
+          interface Node  {  
+            id: Int! 
+          } 
+          type Name {  
+            name: String! 
+          } 
+          type Author { 
+            author: String! 
+          }
+          type PostUserRating inherits Name,Author implements Node {
+            id: Int!
+            rating: String!
+          }`)
+          var answer = compressString(output)
+          var correct = compressString(`
+          interface Node {
+            id:Int!
+          }
+          type Name { 
+            name: String! 
+          }
+          type Author { 
+            author: String! 
+          }
+          type PostUserRating implements Node {
+            name: String! 
+            author: String! 
+            id: Int! 
+            rating: String!
+          }`)
+          assert.equal(answer,correct)
+        })
+        it('04: Should throw an error if inherited type is missing.', () => {
+          /*eslint-enable */
+          assert.throws(() => 
+            transpileSchema(`
+            type Name {  
+              name: String! 
+            }
+            type PostUserRating inherits Name,Author {
+              rating: String!
+            }`), 
+            "Schema error: type PostUserRating cannot find inherited type Author"
+          )
+        })
+        it('05: Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'".', () => {
+          /*eslint-enable */
+          assert.throws(() => 
+            transpileSchema(`
+            interface Name {  
+              name: String! 
+            }
+            type PostUserRating inherits Name {
+              rating: String!
+            }`),
+            "Schema error: type PostUserRating cannot inherit from INTERFACE Name. A type can only inherit from another type"
+          )
+        })
+      })
+    }))
 
   /*eslint-disable */
   describe('graphqls2s', () => 
@@ -869,7 +785,20 @@ var runtest = function(s2s, assert) {
     describe('#extractGraphMetadata: EXTRACT METADATA', () => 
       it('Should extract all metadata (i.e. data starting with \'@\') located on top of schema types of properties.', () => {
         /*eslint-enable */
-        var output = extractGraphMetadata(schema_input_3)
+        var output = extractGraphMetadata(`
+        @node
+        type Brand {
+          id: ID!
+          name: String
+          @edge('<-[ABOUT]-')
+          posts: [Post]
+        }
+
+        @miracle
+        input User {
+          posts: [Post]
+        }
+        `)
         //console.log(inspect(output));
         assert.isOk(output)
         assert.isOk(output.length)
@@ -901,8 +830,8 @@ var runtest = function(s2s, assert) {
 
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getSchemaAST: 01 - BASICS', () => 
-      it('Should extract all types and their properties including their respective comments.', () => {
+    describe('#getSchemaAST', () => {
+      it('01 - BASICS: Should extract all types and their properties including their respective comments.', () => {
         /*eslint-enable */
         var schema = `
         # This is some description of 
@@ -970,12 +899,8 @@ var runtest = function(s2s, assert) {
         assert.equal(type2Prop1.details.result.originName, 'PostRating!')
         assert.equal(type2Prop1.details.result.isGen, false)
         assert.equal(type2Prop1.details.result.name, 'PostRating!')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#getSchemaAST: 02 - GENERIC TYPES', () => 
-      it('Should create new types for each instance of a generic type.', () => {
+      })
+      it('02 - GENERIC TYPES: Should create new types for each instance of a generic type.', () => {
         /*eslint-enable */
         var schema = `
         type Paged<T> {
@@ -995,12 +920,8 @@ var runtest = function(s2s, assert) {
         assert.equal(schemaParts.length, 4)
         var genObj = (schemaParts || []).filter(s => s.type == 'TYPE' && s.name == 'PagedPost')[0]
         assert.isOk(genObj, 'The object \'PagedPost\' that should have been auto-generated from Paged<Post> has not been created.')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#getSchemaAST: 03 - INHERITED METADATA', () => 
-      it('Should add properties from the super type to the sub type.', () => {
+      })
+      it('03 - INHERITED METADATA: Should add properties from the super type to the sub type.', () => {
         /*eslint-enable */
         var schema = `
         @supertype(() => { return 1*2; })
@@ -1084,12 +1005,13 @@ var runtest = function(s2s, assert) {
         assert.isOk(typeMeta3Prop2.details.metadata)
         assert.equal(!typeMeta3Prop2.details.metadata.body, true)
         assert.equal(typeMeta3Prop2.details.metadata.name, 'boris')
-      })))
+      })
+    }))
 
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#getQueryAST: 01 - GET METADATA', () => 
-      it('Should retrieve all metadata associated to the query.', () => {
+    describe('#getQueryAST', () => {
+      it('01 - GET METADATA: Should retrieve all metadata associated to the query.', () => {
         /*eslint-enable */
 
         var schema = `
@@ -1179,12 +1101,8 @@ var runtest = function(s2s, assert) {
         assert.equal(mutationAST[1].name, 'update','The 2nd AST should be named \'update\'.')
         assert.isOk(mutationAST[1].metadata,'metadata should be defined on the \'users\' mutation.')
         assert.equal(mutationAST[1].metadata.name, 'author','There should be an \'auth\' metadata on the \'users\' mutation.')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#getQueryAST: 02 - DETECT AST', () => 
-      it('Should detect if any query AST match a specific predicate.', () => {
+      })
+      it('02 - DETECT AST: Should detect if any query AST match a specific predicate.', () => {
         /*eslint-enable */
         var schema = `
         type User {
@@ -1227,12 +1145,8 @@ var runtest = function(s2s, assert) {
         var schemaAST = getSchemaAST(schema)
         var queryOpAST = getQueryAST(query, null, schemaAST).some(x => x.metadata && x.metadata.name == 'auth')
         assert.isOk(queryOpAST)
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#getQueryAST: 03 - FIND ALL AST PATHS', () => 
-      it('Should return the details of all the AST property that match a predicate.', () => {
+      })
+      it('03 - FIND ALL AST PATHS: Should return the details of all the AST property that match a predicate.', () => {
         /*eslint-enable */
         var schema = `
         type User {
@@ -1288,12 +1202,8 @@ var runtest = function(s2s, assert) {
         assert.equal(paths[0].type, 'String!')
         assert.equal(paths[1].property, 'addresses', '2nd \'auth\' path does not match.')
         assert.equal(paths[1].type, '[Address]')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#getQueryAST: 04 - BASIC TYPES SUPPORT', () => 
-      it('Should support queries with for basic types (id, string, int, boolean, float).', () => {
+      })
+      it('04 - BASIC TYPES SUPPORT: Should support queries with for basic types (id, string, int, boolean, float).', () => {
         /*eslint-enable */
         var schema = `
         type Property {
@@ -1342,12 +1252,13 @@ var runtest = function(s2s, assert) {
         var queryAnswer = normalizeString(buildQuery(queryOpASTIntrospec))
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
-      })))
+      })
+    }))
 
   /*eslint-disable */
   describe('graphqls2s', () => 
-    describe('#buildQuery: 01 - REBUILD QUERY FROM QUERY AST', () => 
-      it('Should rebuild the query exactly similar to its original based on the query AST.', () => {
+    describe('#buildQuery', () => {
+      it('01 - REBUILD QUERY FROM QUERY AST: Should rebuild the query exactly similar to its original based on the query AST.', () => {
         /*eslint-enable */
         var schema = `
         type User {
@@ -1459,12 +1370,8 @@ var runtest = function(s2s, assert) {
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the original.')
         assert.equal(mutationAnswer, mutation, 'The rebuild mutation should match the original.')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: 02 - REBUILD QUERY FOR QUERIES WITH VARIABLES WITH ARRAYS', () => 
-      it('Should support queries with variables of type array.', () => {
+      })
+      it('02 - REBUILD QUERY FOR QUERIES WITH VARIABLES WITH ARRAYS: Should support queries with variables of type array.', () => {
         /*eslint-enable */
         var schema = `
         type User {
@@ -1519,12 +1426,8 @@ var runtest = function(s2s, assert) {
         var queryAnswer = normalizeString(buildQuery(queryOpAST))
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the original with variables of type array.')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: 03 - FILTER QUERY BASED ON METADATA', () => 
-      it('Should rebuild a query different from its origin if some fields have been filtered from the orginal query.', () => {
+      })
+      it('03 - FILTER QUERY BASED ON METADATA: Should rebuild a query different from its origin if some fields have been filtered from the orginal query.', () => {
         /*eslint-enable */
         var schema = `
         type User {
@@ -1633,12 +1536,8 @@ var runtest = function(s2s, assert) {
         var queryAnswer = normalizeString(buildQuery(filteredQueryAST))
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: 04 - FRAGMENTS #1', () => 
-      it('Should support queries with fragments.', () => {
+      })
+      it('04 - FRAGMENTS #1: Should support queries with fragments.', () => {
         /*eslint-enable */
         var schema = `
         type User {
@@ -1766,12 +1665,8 @@ var runtest = function(s2s, assert) {
         var queryAnswer = normalizeString(rebuiltQuery)
 
         assert.equal(queryAnswer, query, 'The rebuild query for the schema request should match the original with fragments.')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: 05 - FRAGMENTS #2', () => 
-      it('Should support merging fragments (DEFRAG).', () => {
+      })
+      it('05 - FRAGMENTS #2: Should support merging fragments (DEFRAG).', () => {
         /*eslint-enable */
         var schema = `
         type User {
@@ -1903,12 +1798,8 @@ var runtest = function(s2s, assert) {
         var queryAnswer = normalizeString(rebuiltQuery)
 
         assert.equal(queryAnswer, query, 'The rebuild query for the schema request should match the original with fragments.')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: 06 - FRAGMENTS #2', () => 
-      it('Should support queries with multiple queries.', () => {
+      })
+      it('06 - FRAGMENTS #2: Should support queries with multiple queries.', () => {
         /*eslint-enable */
         var schema = `
         type User {
@@ -2061,12 +1952,8 @@ var runtest = function(s2s, assert) {
 
         assert.equal(queryAnswer_introspec, query_introspec, 'The rebuild introspec query for the schema request should match the original with fragments.')
         assert.equal(queryAnswer_test, query_test, 'The rebuild test query for the schema request should match the original with fragments.')
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: 07 - SUPPORT NON-NULLABLE FIELDS', () => 
-      it('Should support queries with multiple queries.', () => {
+      })
+      it('07 - SUPPORT NON-NULLABLE FIELDS: Should support queries with multiple queries.', () => {
         /*eslint-enable */
         var schema = `
         type Message {
@@ -2096,12 +1983,8 @@ var runtest = function(s2s, assert) {
         var rebuiltQuery = buildQuery(queryOpAST)
 
         assert.equal(normalizeString(rebuiltQuery), normalizeString(query))
-      })))
-
-  /*eslint-disable */
-  describe('graphqls2s', () => 
-    describe('#buildQuery: 08 - SUPPORT INPUT WITH ARRAY VALUES', () => 
-      it('Should support input with array values.', () => {
+      })
+      it('08 - SUPPORT INPUT WITH ARRAY VALUES: Should support input with array values.', () => {
         /*eslint-enable */
         var schema = `
         type Message {
@@ -2135,7 +2018,8 @@ var runtest = function(s2s, assert) {
         var rebuiltQuery = buildQuery(queryOpAST)
 
         assert.equal(normalizeString(rebuiltQuery), normalizeString(query))
-      })))
+      })
+    }))
 } 
 
 /*eslint-disable */
