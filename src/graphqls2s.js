@@ -15,7 +15,7 @@ const INPUTNAMEREGEX = /input\s(.*?){/
 const ENUMNAMEREGEX = /enum\s(.*?){/
 const INTERFACENAMEREGEX = /interface\s(.*?){/
 const ABSTRACTNAMEREGEX = /abstract\s(.*?){/
-const INHERITSREGEX = /inherits\s+\w+(?:\s*,\s*\w+)*/g;
+const INHERITSREGEX = /inherits\s+\w+(?:\s*,\s*\w+)*/g
 const IMPLEMENTSREGEX = /implements\s(.*?)\{/mg
 const PROPERTYPARAMSREGEX = /\((.*?)\)/
 
@@ -369,7 +369,7 @@ const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 			const genericTypeMatch = name.match(GENERICTYPEREGEX)
 			const isGenericType = genericTypeMatch ? genericTypeMatch[1] : null
 			const inheritsMatch = typeDef.match(INHERITSREGEX)
-			const superClass = inheritsMatch && inheritsMatch[0].replace('inherits', '').trim().split(',').map(v => v.trim()) || null;
+			const superClass = inheritsMatch && inheritsMatch[0].replace('inherits', '').trim().split(',').map(v => v.trim()) || null
 			const implementsMatch = typeDef.match(IMPLEMENTSREGEX)
 			const _interface = implementsMatch 
 				? implementsMatch[0].replace('implements ', '').replace('{', '').split(',').map(x => x.trim().split(' ')[0]) 
@@ -423,21 +423,21 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 		if (memoizedExtendedObject[key]) return memoizedExtendedObject[key]
 
 		var superClass = schemaObjects.filter(function(x) {
-			return obj.inherits.indexOf(x.name) > -1;
-		}).value();
+			return obj.inherits.indexOf(x.name) > -1
+		}).value()
 		var superClassNames = schemaObjects.map(function(x) {
-			return x.name;
-		}).value();
+			return x.name
+		}).value()
 		//find missing classes
-		var missingClasses = _.difference(obj.inherits, superClassNames);
+		var missingClasses = _.difference(obj.inherits, superClassNames)
 		missingClasses.forEach(function(c){
-			throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot find inherited ' + obj.type.toLowerCase() + ' ' + c);
-		});
+			throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot find inherited ' + obj.type.toLowerCase() + ' ' + c)
+		})
 		
 		const superClassesWithInheritance = superClass.map(function(subClass){
-			if (obj.type != subClass.type) throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot inherit from ' + subClass.type + ' ' + subClass.name + '. A ' + obj.type.toLowerCase() + ' can only inherit from another ' + obj.type.toLowerCase());                  
-			return getObjWithExtensions(subClass, schemaObjects);
-		});
+			if (obj.type != subClass.type) throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot inherit from ' + subClass.type + ' ' + subClass.name + '. A ' + obj.type.toLowerCase() + ' can only inherit from another ' + obj.type.toLowerCase())                  
+			return getObjWithExtensions(subClass, schemaObjects)
+		})
 
 		const objWithInheritance = {
 			type: obj.type,
@@ -446,16 +446,16 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 			originalBlockProps: obj.blockProps,
 			metadata: obj.metadata || _.last(superClassesWithInheritance).metadata || null,
 			implements: _.toArray(_.uniq(_.concat(obj.implements, superClassesWithInheritance.implements).filter(function(x) {
-				return x;
+				return x
 			}))),
 			inherits: superClassesWithInheritance,
 			blockProps: (superClassesWithInheritance instanceof Array ? 
-			  _.toArray(_.flatten(_.concat(_.flatten(superClassesWithInheritance.map(function(subClass){
-				return subClass.blockProps;
-			  })), obj.blockProps))): 
-			  _.toArray(_.flatten(_.concat(superClassesWithInheritance.blockProps, obj.blockProps)))
+				_.toArray(_.flatten(_.concat(_.flatten(superClassesWithInheritance.map(function(subClass){
+				return subClass.blockProps
+			})), obj.blockProps))): 
+				_.toArray(_.flatten(_.concat(superClassesWithInheritance.blockProps, obj.blockProps)))
 			)
-		};
+		}
 
 		memoizedExtendedObject[key] = objWithInheritance
 		return getObjWithInterfaces(objWithInheritance, schemaObjects)

@@ -41,6 +41,11 @@
       "name": "Boris Berak",
       "email": "boris@neap.co",
       "url": "https://github.com/bberak"
+    },
+    {
+      "name": "Pankaj Parkar",
+      "email": "pankajparkar@hotmail.com",
+      "url": "https://github.com/pankajparkar"
     }
   ],
   "license": "BSD-3-Clause",
@@ -54,6 +59,7 @@
   "dependencies": {
     "babel-polyfill": "^6.23.0",
     "babel-runtime": "^6.23.0",
+    "graphql": "^0.11.0",
     "lodash": "^4.17.4"
   },
   "devDependencies": {

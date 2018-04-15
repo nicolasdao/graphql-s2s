@@ -4,7 +4,7 @@
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
 */
-const { parse } = require('./graphql/parser')
+const { parse } = require('graphql')
 
 let _start
 const startTime = anything => {
