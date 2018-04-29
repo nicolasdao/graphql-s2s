@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
 */
 const { parse } = require('graphql')
+const shortid = require('shortid')
 
 let _start
 const startTime = anything => {
@@ -380,6 +381,8 @@ const replaceFragmentsInProperties = (properties, fragments=[]) => {
         return null
 }
 
+const newShortId = () => shortid.generate().replace(/-/g, 'r').replace(/_/g, '9')
+
 module.exports = {
     chain,
     log,
@@ -391,5 +394,6 @@ module.exports = {
     time: {
         start: startTime,
         log: logTime
-    }
+    },
+    newShortId
 }

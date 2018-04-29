@@ -634,7 +634,70 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      describe('14 - INHERITANCE:', () => {
+      it('14 - DIRECTIVES: Should support directives.', () => {
+
+        var schema = `
+        directive @isAuthenticated on QUERY | FIELD
+        directive @deprecated
+        (
+          reason: String = "No longer on supported"
+        ) on FIELD_DEFINITION | ENUM_VALUE
+
+        type ExampleType {
+          newField: String 
+          oldField: String @deprecated(reason: "Use 'newField'.")
+        }
+
+        type StandardData<T,U> {
+          @auth
+          id: ID!
+          value: T
+          Dimension: U 
+        }
+
+        type Paged<T,U> {
+          data: [StandardData< T, U>]
+          cursor: ID @isAuthenticated
+        }
+
+        type User {
+          posts: Paged<Post, Date>
+        }
+        `
+        var schema_output = `
+        directive @isAuthenticated on QUERY | FIELD
+        directive @deprecated
+        (
+          reason: String = "No longer on supported"
+        ) on FIELD_DEFINITION | ENUM_VALUE
+
+        type ExampleType {
+          newField: String 
+          oldField: String @deprecated(reason: "Use 'newField'.")
+        }
+
+        type User {
+          posts: PagedPostDate
+        }
+
+        type StandardDataPostDate {
+          id: ID!
+          value: Post
+          Dimension: Date 
+        }
+
+        type PagedPostDate {
+          data: [StandardDataPostDate]
+          cursor: ID @isAuthenticated
+        }
+        `
+
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
+      describe('15 - INHERITANCE:', () => {
         it('01: Should add properties from the super type to the sub type.', () => {
           var output = transpileSchema(`
           type Post {
@@ -762,7 +825,6 @@ var runtest = function(s2s, assert) {
         assert.isOk(!isTypeGeneric('[Paged<Product>]', 'T'), '\'[Paged<Product>]\', \'T\' should NOT work.')
       })))
 
- 
   describe('graphqls2s', () => 
     describe('#extractGraphMetadata: EXTRACT METADATA', () => 
       it('Should extract all metadata (i.e. data starting with \'@\') located on top of schema types of properties.', () => {
@@ -808,7 +870,6 @@ var runtest = function(s2s, assert) {
         assert.equal(meta2.parent.metadata.type, 'TYPE')
         assert.equal(meta2.parent.metadata.name, 'node')
       })))
-
 
   describe('graphqls2s', () => 
     describe('#getSchemaAST', () => {
@@ -985,7 +1046,6 @@ var runtest = function(s2s, assert) {
         assert.equal(typeMeta3Prop2.details.metadata.name, 'boris')
       })
     }))
-
 
   describe('graphqls2s', () => 
     describe('#getQueryAST', () => {
@@ -1228,7 +1288,6 @@ var runtest = function(s2s, assert) {
         assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
       })
     }))
-
 
   describe('graphqls2s', () => 
     describe('#buildQuery', () => {

@@ -19,6 +19,14 @@ const INHERITSREGEX = /inherits\s+\w+(?:\s*,\s*\w+)*/g
 const IMPLEMENTSREGEX = /implements\s(.*?)\{/mg
 const PROPERTYPARAMSREGEX = /\((.*?)\)/
 
+const TYPE_REGEX = { regex: /(extend type|type)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'type' }
+const INPUT_REGEX = { regex: /(extend input|input)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'input' }
+const ENUM_REGEX = { regex: /enum\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'enum' }
+const INTERFACE_REGEX = { regex: /(extend interface|interface)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'interface' }
+const ABSTRACT_REGEX = { regex: /(extend abstract|abstract)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'abstract' }
+const SCALAR_REGEX = { regex: /(.{1}|.{0})scalar\s(.*?)([^\s]*?)(?![a-zA-Z0-9])/mg, type: 'scalar' }
+const UNION_REGEX = { regex: /(.{1}|.{0})union([^\n]*?)\n/gm, type: 'union' }
+
 const carrReturnEsc = '_cr_'
 const tabEsc = '_t_'
 
@@ -47,19 +55,12 @@ const escapeGraphQlSchemaPlus = (sch, cr, t) => {
  *                      		extend: false
  *                      	}]
  */
-const typeRegex = { regex: /(extend type|type)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'type' }
-const inputRegex = { regex: /(extend input|input)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'input' }
-const enumRegex = { regex: /enum\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'enum' }
-const interfaceRegex = { regex: /(extend interface|interface)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'interface' }
-const abstractRegex = { regex: /(extend abstract|abstract)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'abstract' }
-const scalarRegex = { regex: /(.{1}|.{0})scalar\s(.*?)([^\s]*?)(?![a-zA-Z0-9])/mg, type: 'scalar' }
-const unionRegex = { regex: /(.{1}|.{0})union([^\n]*?)\n/gm, type: 'union' }
 const getSchemaBits = (sch='') => {
 	const escapedSchemaWithComments = escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc)
 	// We append '\n' to help isolating the 'union'
 	const schemaWithoutComments = ' ' + sch.replace(/#(.*?)\n/g, '') + '\n' 
 	const escapedSchemaWithoutComments = escapeGraphQlSchemaPlus(schemaWithoutComments, carrReturnEsc, tabEsc)
-	return _.flatten([typeRegex, inputRegex, enumRegex, interfaceRegex, abstractRegex, scalarRegex, unionRegex]
+	return _.flatten([TYPE_REGEX, INPUT_REGEX, ENUM_REGEX, INTERFACE_REGEX, ABSTRACT_REGEX, SCALAR_REGEX, UNION_REGEX]
 	.map(rx => 
 		chain((
 			rx.type == 'scalar' ? escapedSchemaWithoutComments : 
@@ -609,9 +610,9 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 	else return { obj: null, stringObj: null }
 }
 
-const buildSchemaString = schemaObjs => {
-	const part_01 = _(schemaObjs)
-		.filter(x => !x.genericType && x.type != 'ABSTRACT')
+const buildSchemaString = (schemaObjs=[]) => {
+	const part_01 = schemaObjs
+		.filter(x => !x.genericType && x.type != 'ABSTRACT' && x.type != 'DIRECTIVE')
 		.map(obj => parseSchemaObjToString(obj.comments, obj.type, obj.name, obj.implements, obj.blockProps, obj.extend))
 		.join('\n')
 	
@@ -621,9 +622,27 @@ const buildSchemaString = schemaObjs => {
 		.forEach(value => createNewSchemaObjectFromGeneric(value, schemaObjs, resolvedGenericTypes).stringObj)
 	
 	const part_02 = _(resolvedGenericTypes).map(x => x.stringObj).join('\n')
-	return part_01 + part_02
+	const directives = schemaObjs.filter(x => x.type == 'DIRECTIVE' && x.raw).map(x => x.raw).join('')
+	return directives  + '\n' + part_01 + part_02
 }
 
+
+/**
+ * Breaks down a schema into its bits and pieces.
+ * @param  {String}  graphQlSchema      
+ * @param  {Array}   metadata           
+ * @param  {Boolean} includeNewGenTypes 
+ * @return {String}  result.type 		e.g. 'TYPE', 'INTERFACE'
+ * @return {Boolean} result.raw
+ * @return {Boolean} result.extend
+ * @return {String}  result.name
+ * @return {String}  result.metadata
+ * @return {Boolean} result.genericType
+ * @return {String}  result.blockProps
+ * @return {Boolean} result.inherits
+ * @return {String}  result.implements
+ * @return {String}  result.comments
+ */
 const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(getSchemaBits(graphQlSchema))
 	.next(schemaBits => _([getInterfaces, getAbstracts, getTypes, getInputs, getEnums, getScalars, getUnions]
 		.reduce((objects, getObjects) => objects.concat(getObjects(schemaBits, metadata)), [])))
@@ -641,6 +660,25 @@ const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(ge
 		} else 
 			return v
 	})
+	// Include directives
+	.next(v => {
+		const directives = (metadata || []).filter(m => m.directive)
+		if (directives.length > 0) {
+			return v.concat(directives.map(d => ({ 
+				type: 'DIRECTIVE',
+				name: d.name,
+				raw: (d.body || '').replace(/_cr_/g, '\n'),
+				extend: false,
+				metadata: null,
+				genericType: null,
+				blockProps: [],
+				inherits: null,
+				implements: null,
+				comments: undefined 
+			})))
+		} else
+			return v
+	})
 	.val()
 
 const resetMemory = () => {
@@ -655,12 +693,12 @@ const resetMemory = () => {
 
 let graphqls2s = {
 	getSchemaAST: graphQlSchema => chain(resetMemory())
-		.next(() => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
+		.next(() => removeGraphMetadata(graphQlSchema))
 		.next(data => getSchemaParts(data.stdSchema, data.metadata, true))
 		.next(v => { resetMemory(); return v })
 		.val(),
 	transpileSchema: graphQlSchema => chain(resetMemory())
-		.next(() => ({ metadata: extractGraphMetadata(graphQlSchema), stdSchema: removeGraphMetadata(graphQlSchema) }))
+		.next(() => removeGraphMetadata(graphQlSchema))
 		.next(data => buildSchemaString(getSchemaParts(data.stdSchema, data.metadata)))
 		.next(v => { resetMemory(); return v })
 		.val(),

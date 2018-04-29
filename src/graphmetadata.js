@@ -6,23 +6,80 @@
  * LICENSE file in the root directory of this source tree.
 */
 const _ = require('lodash')
-const { chain, log, escapeGraphQlSchema, removeMultiSpaces, matchLeftNonGreedy } = require('./utilities')
+const { chain, log, escapeGraphQlSchema, removeMultiSpaces, matchLeftNonGreedy, newShortId } = require('./utilities')
 
 const carrReturnEsc = '_cr_'
 const tabEsc = '_t_'
 
 /**
- * Extracts the graph metadata from a GraphQL schema in order to produce graph visualization (e.g. D3.js)
+ * Remove directives
+ * @param  {String} schema 										Escaped schema (i.e., without tabs or carriage returns. The CR have been replaced by '_cr_' ) 
+ * @return {String} output.schema 								Schema without directives
+ * @return {Array} 	output.directives
+ * @return {String} output.directives[0].name  					Directive's name
+ * @return {String} output.directives[0].definition  			Directive's definition
+ * @return {Array} 	output.directives[0].instances  	
+ * @return {String} output.directives[0].instances[0].id 		Unique identifier that replaces the directive's instance value
+ * @return {String} output.directives[0].instances[0].value 	Directive's instance value
+ */
+const removeDirectives = (schema = '') => {
+	if (!schema)
+		return { schema, directives:null }
+
+	schema += '_cr_'
+	const directives = []
+	const d = schema.match(/directive\s(.*?)@(.*?)(\((.*?)\)\son\s(.*?)_cr_|\son\s(.*?)_cr_)/mg) || []
+	d.forEach(directive => {
+		const directiveName = directive.match(/@(.*?)\s/)[0].replace(/(_cr_)\s/g,'').trim()
+		schema = schema.replace(directive, '')
+		if (!schema.match(/_cr_$/))
+			schema += '_cr_'
+
+		const dInstances = schema.match(new RegExp(`${directiveName}(.*?)_cr_`, 'g')) || []
+		const instances = []
+		dInstances.forEach(dInst => {
+			const id = `_${newShortId()}_`
+			const inst = dInst.replace(/_cr_$/,'')
+			schema = schema.replace(inst, id)
+			instances.push({ id, value: inst })
+		})
+
+		directives.push({ name: directiveName.replace('@',''), body: directive, directive: true, directiveValues: instances })
+	})
+
+	return { schema, directives }
+}
+
+const reinsertDirectives = (schema='', directives=[]) => {
+	if (!schema)
+		return schema
+
+	const directiveDefinitions = directives.map(x => x.body).join('_cr_')
+	directives.forEach(({ directiveValues=[] }) => directiveValues.forEach(({ id, value }) => {
+		schema = schema.replace(id, value)
+	}))
+
+	return `${directiveDefinitions}${schema}`
+}
+
+/**
+ * Extracts the graph metadata as well as the directives from a GraphQL schema 
  * 
- * @param  {string} schema 					GraphQL schema containing Graph metadata (e.g. @node, @edge, ...)
- * @return {object} graphMetadata   		Graph Metadata with the standard version of the GraphQL Schema (i.e. without the metadata @node, @edge, ...)
- * @return {object} graphMetadata.metadata  Graph Metadata
- * @return {string} graphMetadata.stdSchema Standard version of the GraphQL Schema (i.e. without the metadata @node, @edge, ...) 
+ * @param  {string} schema 						GraphQL schema containing Graph metadata (e.g. @node, @edge, ...)
+ * @return {Array} 	graphMetadata  
+ * @return {String} graphMetadata.escSchema		Escaped schema	
+ * @return {String} graphMetadata[0].name
+ * @return {String} graphMetadata[0].body
+ * @return {String} graphMetadata[0].schemaType
+ * @return {String} graphMetadata[0].schemaName
+ * @return {String} graphMetadata[0].parent
+ * @return {String} graphMetadata[0].directive
+ * @return {String} graphMetadata[0].directiveValues
  */
 const extractGraphMetadata = (schema = '') => {
-	const escSchema = escapeGraphQlSchema(schema, carrReturnEsc, tabEsc).replace(/_t_/g, ' ')
+	const { schema:escSchema, directives } = removeDirectives(escapeGraphQlSchema(schema, carrReturnEsc, tabEsc).replace(/_t_/g, ' '))
 	const attrMatches = escSchema.match(/@(.*?)(_cr_)(.*?)({|_cr_)/mg)
-	const graphQlMetadata = chain(_(attrMatches).map(m => chain(m.split(carrReturnEsc)).next(parts => {
+	let graphQlMetadata = chain(_(attrMatches).map(m => chain(m.split(carrReturnEsc)).next(parts => {
 		if (parts.length < 2) 
 			throw new Error(`Schema error: Misused metadata attribute in '${parts.join(' ')}.'`)
 		
@@ -60,14 +117,22 @@ const extractGraphMetadata = (schema = '') => {
 				.val() 
 			: m)
 		: m))
-	.next(metadata => _.toArray(metadata))
-	.val()
+	.next(metadata => _.toArray(metadata).concat(directives))
+	.val() || []
+
+	graphQlMetadata.escSchema = escSchema
 
 	return graphQlMetadata
 }
 
-const removeGraphMetadata = (schema = '') => 
-	escapeGraphQlSchema(schema, carrReturnEsc, tabEsc).replace(/_t_/g, ' ').replace(/@(.*?)_cr_/g, '').replace(/_cr_/g, '\n')
+const removeGraphMetadata = (schema = '') => {
+	const meta = extractGraphMetadata(schema) || []
+	const directives = meta.filter(m => m.directive)
+	const schemaWithNoMeta = (reinsertDirectives(meta.escSchema.replace(/@(.*?)_cr_/g, ''), directives) || '').replace(/_cr_/g, '\n')
+	return { stdSchema: schemaWithNoMeta, metadata: meta }
+
+	//escapeGraphQlSchema(schema, carrReturnEsc, tabEsc).replace(/_t_/g, ' ').replace(/@(.*?)_cr_/g, '').replace(/_cr_/g, '\n')
+}
 
 module.exports = {
 	extractGraphMetadata,
