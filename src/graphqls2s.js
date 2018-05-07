@@ -228,10 +228,12 @@ const getTypeDetails = (t, metadata, genericParentTypes) => chain((t.match(GENER
 		const isGen = genTypes ? true : false
 		const genericTypes = isGen ? genTypes.split(',').map(x => x.trim()) : null
 		const originName = t
+		const directive = (t.match(/@.+/) || [])[0]
 		const endingChar = t.match(/!$/) ? '!' : ''
 		const dependsOnParent = isGen && genericParentTypes && genericParentTypes.length > 0 && genericTypes.some(x => genericParentTypes.some(y => x == y))
 		return { 
 			originName, 
+			directive,
 			isGen, 
 			dependsOnParent,
 			metadata,
@@ -246,8 +248,22 @@ const getTypeDetails = (t, metadata, genericParentTypes) => chain((t.match(GENER
 	})
 	.val()
 
-const getPropertyValue = ({ name, params, result }, mapResultName) => 
-	`${name}${params ? `(${params})` : ''}${result && result.name ? `: ${mapResultName ? mapResultName(result.name) : result.name}` : ''}`
+const getPropertyValue = ({ name, params, result }, mapResultName) => {
+	if (name.indexOf('data') >= 0)
+		console.log('RRR: ', { name, params, result })
+	const leftPart = `${name}${params ? `(${params})` : ''}`
+	let delimiter = ''
+	let rightPart = ''
+	if (result && result.name) {
+		delimiter = ': '
+		rightPart = mapResultName ? mapResultName(result.name) : result.name
+		// The directive exists, but it has been removed from the property because of some prior 
+		// transformatons (most likely the part that takes care of the generic type renaming).
+		if (!rightPart.match(/@.+/) && result.directive)
+			rightPart = `${rightPart} ${result.directive}`
+	}
+	return `${leftPart}${delimiter}${rightPart}`
+}
 
 /**
  * Breaks down a string representing a block { ... } into its various parts.
@@ -296,7 +312,7 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
 				? chain(prop.split(paramsMatch[0]))
 					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: paramsMatch[1], result: getTypeDetails((parts[1] || '').replace(':', '').trim(), metadata, baseObj.genericTypes) })).val()
 				: chain(prop.split(':'))
-					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: null, result: getTypeDetails((parts[1] || '').trim(), metadata, baseObj.genericTypes) })).val()
+					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: null, result: getTypeDetails((parts[1] || '').trim(), metadata, baseObj.genericTypes) })).val()			
 			a.props.push({ 
 				comments: a.comments.join('\n    '), 
 				details: propDetails,
@@ -592,12 +608,13 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 
 			return p
 		})
+
 		const newSchemaObjStr = parseSchemaObjToString(baseGenObj.comments, baseGenObj.type, name, baseGenObj.implements, blockProps)
 		const result = { 
 			obj: { 
 				comments: baseGenObj.comments, 
 				type: baseGenObj.type, 
-				name: name, 
+				name, 
 				implements: baseGenObj.implements, 
 				blockProps: blockProps, 
 				genericType: null 
@@ -623,7 +640,7 @@ const buildSchemaString = (schemaObjs=[]) => {
 	
 	const part_02 = _(resolvedGenericTypes).map(x => x.stringObj).join('\n')
 	const directives = schemaObjs.filter(x => x.type == 'DIRECTIVE' && x.raw).map(x => x.raw).join('')
-	return directives  + '\n' + part_01 + part_02
+	return directives + '\n' + part_01 + part_02
 }
 
 
