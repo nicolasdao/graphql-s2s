@@ -227,9 +227,9 @@ const getTypeDetails = (t, metadata, genericParentTypes) => chain((t.match(GENER
 	.next(genTypes => {
 		const isGen = genTypes ? true : false
 		const genericTypes = isGen ? genTypes.split(',').map(x => x.trim()) : null
-		const originName = t
+		const originName = t.replace(/@.+/, '').trim()
 		const directive = (t.match(/@.+/) || [])[0]
-		const endingChar = t.match(/!$/) ? '!' : ''
+		const endingChar = originName.match(/!$/) ? '!' : ''
 		const dependsOnParent = isGen && genericParentTypes && genericParentTypes.length > 0 && genericTypes.some(x => genericParentTypes.some(y => x == y))
 		return { 
 			originName, 
@@ -238,7 +238,7 @@ const getTypeDetails = (t, metadata, genericParentTypes) => chain((t.match(GENER
 			dependsOnParent,
 			metadata,
 			genericParentTypes,
-			name: isGen && !dependsOnParent ? `${getAliasName(originName, metadata)}${endingChar}` : t 
+			name: isGen && !dependsOnParent ? `${getAliasName(originName, metadata)}${endingChar}` : originName 
 		}
 	})
 	.next(result => {
@@ -249,17 +249,13 @@ const getTypeDetails = (t, metadata, genericParentTypes) => chain((t.match(GENER
 	.val()
 
 const getPropertyValue = ({ name, params, result }, mapResultName) => {
-	if (name.indexOf('data') >= 0)
-		console.log('RRR: ', { name, params, result })
 	const leftPart = `${name}${params ? `(${params})` : ''}`
 	let delimiter = ''
 	let rightPart = ''
 	if (result && result.name) {
 		delimiter = ': '
 		rightPart = mapResultName ? mapResultName(result.name) : result.name
-		// The directive exists, but it has been removed from the property because of some prior 
-		// transformatons (most likely the part that takes care of the generic type renaming).
-		if (!rightPart.match(/@.+/) && result.directive)
+		if (result.directive)
 			rightPart = `${rightPart} ${result.directive}`
 	}
 	return `${leftPart}${delimiter}${rightPart}`
@@ -307,12 +303,12 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
 			a.comments.push(p)
 		else {
 			const prop = p.replace(/ +(?= )/g,'').replace(/,$/, '')
-			const paramsMatch  = prop.match(PROPERTYPARAMSREGEX)
+			const paramsMatch  = prop.replace(/@.+/, '').match(PROPERTYPARAMSREGEX)
 			const propDetails = paramsMatch 
 				? chain(prop.split(paramsMatch[0]))
 					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: paramsMatch[1], result: getTypeDetails((parts[1] || '').replace(':', '').trim(), metadata, baseObj.genericTypes) })).val()
 				: chain(prop.split(':'))
-					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: null, result: getTypeDetails((parts[1] || '').trim(), metadata, baseObj.genericTypes) })).val()			
+					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: null, result: getTypeDetails(parts.slice(1).join(':').trim(), metadata, baseObj.genericTypes) })).val()			
 			a.props.push({ 
 				comments: a.comments.join('\n    '), 
 				details: propDetails,
@@ -590,13 +586,16 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 					// e.g. PagedProduct
 					const concreteGenPropName = createNewSchemaObjectFromGeneric(concreteGenProp, schemaBreakDown, memoizedNewSchemaObjectFromGeneric).obj.name
 					// e.g. [PagedProduct]
-					const originalConcretePropTypeName = propTypeIsArray ? `[${concreteGenPropName}]` : concreteGenPropName
-					
+					let originalConcretePropTypeName = propTypeIsArray ? `[${concreteGenPropName}]` : concreteGenPropName
+					// e.g. [PagedProduct]!
+					originalConcretePropTypeName = originalConcretePropTypeName + (propTypeIsRequired ? '!' : '')
+					// e.g. [PagedProduct]! @isAuthenticated
+					originalConcretePropTypeName = prop.details.result.directive ? `${originalConcretePropTypeName} ${prop.details.result.directive}` : originalConcretePropTypeName
 					details.result = {
-						originName: prop.details.result.name,
+						originName: prop.details.result.directive ? `${prop.details.result.name} ${prop.details.result.directive}` : prop.details.result.name,
 						isGen: true,
-						name: originalConcretePropTypeName + (propTypeIsRequired ? '!' : '')
-					} 
+						name: originalConcretePropTypeName
+					}
 				}
 
 				p = { 
@@ -608,7 +607,7 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 
 			return p
 		})
-
+	
 		const newSchemaObjStr = parseSchemaObjToString(baseGenObj.comments, baseGenObj.type, name, baseGenObj.implements, blockProps)
 		const result = { 
 			obj: { 
