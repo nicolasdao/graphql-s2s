@@ -146,16 +146,16 @@ const genericDefaultNameAlias = genName => {
  * @return {string}               	e.g. 'Toy<User>', 'Toy<User,Product>'
  */
 const replaceGenericWithType = (genericType, genericLetters, concreteType) => 
-	chain({ gType: genericType.trim(), gLetters: genericLetters.map(x => x.trim()), cTypes: concreteType.split(',').map(x => x.trim()) })
-	.next(({ gType, gLetters, cTypes }) => {
+	chain({ gType: genericType.replace(/\s/g, ''), gLetters: genericLetters.map(x => x.replace(/\s/g, '')), cTypes: concreteType.split(',').map(x => x.replace(/\s/g, '')) })
+	.next(({ gType, gLetters, cTypes }) => {		
 		const cTypesLength = cTypes.length
 		const genericTypeIsArray = gType.indexOf('[') == 0 && gType.indexOf(']') > 0
 		const endingChar = gType.match(/!$/) ? '!' : ''
 		if (gLetters.length != cTypesLength)
 			throw new Error(`Invalid argument exception. Mismatch between the number of types in 'genericLetters' (${genericLetters.join(',')}) and 'concreteType' (${concreteType}).`)		
 		// e.g. genericType = 'T', genericLetters = ['T'], concreteType = 'User' -> resp = 'User'
-		if (gLetters.length == 1 && gType == gLetters[0]) 
-			return `${cTypes[0]}${endingChar}`
+		if (gLetters.length == 1 && gType.replace(/!$/, '') == gLetters[0])
+			return  `${cTypes[0]}${endingChar}`
 		// e.g. genericType = 'Paged<T>' or '[Paged<T>]'
 		else if (gType.indexOf('<') > 0 && gType.indexOf('>') > 0) {
 			const type = genericTypeIsArray ? gType.match(/\[(.*?)\]/)[1] : gType
@@ -529,13 +529,14 @@ const parseSchemaObjToString = (comments, type, name, _implements, blockProps, e
 /**
  * Tests if the type is a generic type based on the value of genericLetter
  * 
- * @param  {String} type          e.g. 'Paged<T>', '[T]', 'T'
+ * @param  {String} type          e.g. 'Paged<T>', '[T]', 'T', 'T!'
  * @param  {String} genericLetter e.g. 'T', 'T,U'
  * @return {Boolean}              e.g. if type equals 'Paged<T>' or '[T]' and genericLetter equals 'T' then true.
  */
+const SANITIZE_GEN_TYPE_REGEX = /^\[|\s|\](\s*)(!*)(\s*)$|!/g
 const isTypeGeneric = (type, genericLetter) => {
-	const sanitizedType = type ? type.replace(/^\[|\s|\]$/g, '') : type
-	const sanitizedgenericLetter = genericLetter ? genericLetter.replace(/^\[|\s|\]$/g, '') : genericLetter
+	const sanitizedType = type ? type.replace(SANITIZE_GEN_TYPE_REGEX, '') : type
+	const sanitizedgenericLetter = genericLetter ? genericLetter.replace(SANITIZE_GEN_TYPE_REGEX, '') : genericLetter
 	if (!sanitizedType || !sanitizedgenericLetter)
 		return false
 	else if (sanitizedType == sanitizedgenericLetter)
