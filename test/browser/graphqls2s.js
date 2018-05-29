@@ -881,6 +881,38 @@ var runtest = function(s2s, assert) {
           'Schema error: type PostUserRating cannot inherit from INTERFACE Name. A type can only inherit from another type'
         )
       })
+      it('20 - DIRECTIVES: Allow specified directives to remain', () => {
+          var output = transpileSchema(`
+          type Mutation {
+            createName(name: String!): Name
+          }
+          
+          type Subscription {
+            nameCreated: Name
+                @aws_subscribe(mutations:["createName"])
+          }
+          
+          type Name {
+            name: String!
+          }
+          `)
+          var answer = compressString(output)
+          var correct = compressString(`
+          type Mutation {
+            createName(name: String!): Name
+          }
+        
+          type Subscription {
+            nameCreated: Name
+              @aws_subscribe(mutations:["createName"])
+          }
+        
+          type Name {
+            name: String!
+          }          
+          `)
+          assert.equal(answer, correct)
+      })
     }))
 
   describe('graphqls2s', () => 

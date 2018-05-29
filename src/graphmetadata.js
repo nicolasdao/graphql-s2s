@@ -11,6 +11,10 @@ const { chain, log, escapeGraphQlSchema, removeMultiSpaces, matchLeftNonGreedy, 
 const carrReturnEsc = '_cr_'
 const tabEsc = '_t_'
 
+const DIRECTIVES_TO_REMAIN = [
+    '@aws_subscribe'
+]
+
 /**
  * Remove directives
  * @param  {String} schema 										Escaped schema (i.e., without tabs or carriage returns. The CR have been replaced by '_cr_' ) 
@@ -125,13 +129,39 @@ const extractGraphMetadata = (schema = '') => {
 	return graphQlMetadata
 }
 
-const removeGraphMetadata = (schema = '') => {
-	const meta = extractGraphMetadata(schema) || []
-	const directives = meta.filter(m => m.directive)
-	const schemaWithNoMeta = (reinsertDirectives(meta.escSchema.replace(/@(.*?)_cr_/g, ''), directives) || '').replace(/_cr_/g, '\n')
-	return { stdSchema: schemaWithNoMeta, metadata: meta }
+/**
+ * Either replaces a directive with specified value, or allows the directive to remain unchanged
+ *
+ * @param {string} toReplace	The string you wish to be evaluated and potentially replaced
+ * @param {string} replaceWith	The string you wish any directives to be replaced with
+ * @return {string} replaced	A string that either contains the original value, so the replaceWith value
+ */
+const replaceOrKeepDirective = (toReplace, replaceWith = '') => {
+	let validReplace = true;
+	DIRECTIVES_TO_REMAIN.map((DIRECTIVE_TO_REMAIN) => {
+		if(toReplace.includes(DIRECTIVE_TO_REMAIN)) {
+            validReplace = false
+		}
+	});
+	return validReplace ? replaceWith : toReplace
+}
 
-	//escapeGraphQlSchema(schema, carrReturnEsc, tabEsc).replace(/_t_/g, ' ').replace(/@(.*?)_cr_/g, '').replace(/_cr_/g, '\n')
+/**
+ * Replaces all @... directives, except those that are specified to remain in DIRECTIVES_TO_REMAIN
+ *
+ * @param {string} escSchema 	GraphQL escaped schema
+ * @return {string} escSchema  	Correctly escaped schema, with @... directives removed, excluding those specified to remain
+ */
+const escSchemaReplace = (escSchema = '') => {
+	return escSchema.replace(/@(.*?)_cr_/g, (toReplace) => replaceOrKeepDirective(toReplace, ''))
+};
+
+const removeGraphMetadata = (schema = '') => {
+    const meta = extractGraphMetadata(schema) || []
+    const directives = meta.filter(m => m.directive)
+    const escSchema = escSchemaReplace(meta.escSchema)
+    const schemaWithNoMeta = (reinsertDirectives(escSchema, directives) || '').replace(/_cr_/g, '\n')
+    return { stdSchema: schemaWithNoMeta, metadata: meta }
 }
 
 module.exports = {
