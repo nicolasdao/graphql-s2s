@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
 */
 const _ = require('lodash')
-const { chain, log, escapeGraphQlSchema, getQueryAST, buildQuery } = require('./utilities')
+const { chain, log, escapeGraphQlSchema, getQueryAST, buildQuery, newShortId } = require('./utilities')
 const { extractGraphMetadata, removeGraphMetadata } = require('./graphmetadata')
 
 const GENERICTYPEREGEX = /<(.*?)>/
@@ -57,18 +57,32 @@ const escapeGraphQlSchemaPlus = (sch, cr, t) => {
  */
 const getSchemaBits = (sch='') => {
 	const escapedSchemaWithComments = escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc)
+	const { schema:escSchemaWithEscComments, tokens } = (escapedSchemaWithComments.match(/#(.*?)_cr_/g) || []).reduce((acc,m) => {
+		const commentToken = `#${newShortId()}_cr_`
+		acc.schema = acc.schema.replace(m, commentToken)
+		acc.tokens.push({ id: commentToken, value: m })
+		return acc
+	}, { schema: escapedSchemaWithComments, tokens: [] })
 	// We append '\n' to help isolating the 'union'
 	const schemaWithoutComments = ' ' + sch.replace(/#(.*?)\n/g, '') + '\n' 
 	const escapedSchemaWithoutComments = escapeGraphQlSchemaPlus(schemaWithoutComments, carrReturnEsc, tabEsc)
 	return _.flatten([TYPE_REGEX, INPUT_REGEX, ENUM_REGEX, INTERFACE_REGEX, ABSTRACT_REGEX, SCALAR_REGEX, UNION_REGEX]
 	.map(rx => 
+		// 1. Apply the regex matching 
 		chain((
 			rx.type == 'scalar' ? escapedSchemaWithoutComments : 
 			rx.type == 'union' ? schemaWithoutComments : 
-			escapedSchemaWithComments).match(rx.regex) || [])
+			escSchemaWithEscComments).match(rx.regex) || [])
+		// 2. Filter the right matches
 		.next(regexMatches => 
 			rx.type == 'scalar' ? regexMatches.filter(m => m.indexOf('scalar') == 0 || m.match(/^(?![a-zA-Z0-9])/)) :
 			rx.type == 'union' ? regexMatches.filter(m => m.indexOf('union') == 0 || m.match(/^(?![a-zA-Z0-9])/)) : regexMatches)
+		// 3. Replace the excaped comments with their true value
+		.next(regexMatches => regexMatches.map(b => (b.match(/#(.*?)_cr_/g) || []).reduce((acc,m) => {
+			const value = (tokens.find(t => t.id == m) || {}).value
+			return value ? acc.replace(m, value) : acc
+		}, b)))
+		// 4. Breackdown each match into 'property', 'block' and 'extend'
 		.next(regexMatches => {
 			const transform = 
 				rx.type == 'scalar' ? breakdownScalarBit : 
@@ -105,14 +119,16 @@ const breakdownUnionBit = str => {
 }
 
 const getSchemaEntity = firstLine => 
-	firstLine.indexOf('type') == 0 ? { type: 'TYPE', name: firstLine.replace('type', '').replace(/ /g, '').replace('{', '') } :
-	firstLine.indexOf('enum') == 0 ? { type: 'ENUM', name: firstLine.replace('enum', '').replace(/ /g, '').replace('{', '') } :
-	firstLine.indexOf('input') == 0 ? { type: 'INPUT', name: firstLine.replace('input', '').replace(/ /g, '').replace('{', '') } :
-	firstLine.indexOf('interface') == 0 ? { type: 'INTERFACE', name: firstLine.replace('interface', '').replace(/ /g, '').replace('{', '') } :
+	firstLine.indexOf('type') == 0 ? { type: 'TYPE', name: firstLine.match(/type\s+(.*?)\s+.*/)[1].trim() } :
+	firstLine.indexOf('enum') == 0 ? { type: 'ENUM', name: firstLine.match(/enum\s+(.*?)\s+.*/)[1].trim() } :
+	firstLine.indexOf('input') == 0 ? { type: 'INPUT', name: firstLine.match(/input\s+(.*?)\s+.*/)[1].trim() } :
+	firstLine.indexOf('interface') == 0 ? { type: 'INTERFACE', name: firstLine.match(/interface\s+(.*?)\s+.*/)[1].trim() } :
+	firstLine.indexOf('union') == 0 ? { type: 'UNION', name: firstLine.match(/union\s+(.*?)\s+.*/)[1].trim() } :
+	firstLine.indexOf('scalar') == 0 ? { type: 'SCALAR', name: firstLine.match(/scalar\s+(.*?)\s+.*/)[1].trim() } :
 	{ type: null, name: null }
 
-const getCommentsBits = (sch) => _.toArray(
-	_(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(/#(.*?)_cr_([^#]*?)({|:)/g) || [])
+const getCommentsBits = (sch) => 
+	(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(/#(.*?)_cr_([^#]*?)({|:)/g) || [])
 	.filter(x => x.match(/{$/))
 	.map(c => {
 		const parts = _(c.split(carrReturnEsc).map(l => l.replace(/_t_/g, '    ').trim())).filter(x => x != '')
@@ -120,7 +136,6 @@ const getCommentsBits = (sch) => _.toArray(
 		return { text: parts.initial(), property: getSchemaEntity(parts.last()), comments: hashCount == parts.size() - 1 }
 	})
 	.filter(x => x.comments).map(x => ({ text: x.text.join('\n'), property: x.property }))
-)
 
 /**
  * Gets the alias for a generic type (e.g. Paged<Product> -> PagedProduct)
@@ -432,6 +447,8 @@ const getUnions = (definitions, metadata) => getSchemaObject(definitions, 'union
 let memoizedExtendedObject = {}
 const getObjWithExtensions = (obj, schemaObjects) => {
 	if (obj && schemaObjects && obj.inherits) {
+
+
 		const key = `${obj.type}_${obj.name}_${obj.genericType}`
 		if (memoizedExtendedObject[key]) return memoizedExtendedObject[key]
 
@@ -443,6 +460,7 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 		}).value()
 		//find missing classes
 		var missingClasses = _.difference(obj.inherits, superClassNames)
+
 		missingClasses.forEach(function(c){
 			throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot find inherited ' + obj.type.toLowerCase() + ' ' + c)
 		})

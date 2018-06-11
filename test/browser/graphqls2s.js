@@ -25,36 +25,9 @@ var runtest = function(s2s, assert) {
   var getSchemaAST = s2s.getSchemaAST
   var transpileSchema = s2s.transpileSchema
   var extractGraphMetadata = s2s.extractGraphMetadata
-  var getGenericAlias = s2s.getGenericAlias
   var getQueryAST = s2s.getQueryAST
   var buildQuery = s2s.buildQuery
   var isTypeGeneric = s2s.isTypeGeneric
-
-
-  // describe('graphqls2s', () => 
-  //   describe('#getGenericAlias', () => 
-  //     it('Should alias generics using custom rules.', () => {
-  //       var func = '(T => T + "s")'
-  //       var genericType = 'Paged<Product>'
-  //       var getAlias = getGenericAlias(func)
-  //       var alias = getAlias(genericType)
-  //       assert.equal(alias,'Products')
-
-  //       var getAlias_2 = getGenericAlias()
-  //       var alias_2 = getAlias_2(genericType)
-  //       assert.equal(alias_2,'PagedProduct')
-
-  //       var func_3 = '((T,U) => T + "sPer" + U)'
-  //       var genericType_3 = 'Paged<Product, User>'
-  //       var getAlias_3 = getGenericAlias(func_3)
-  //       var alias_3 = getAlias_3(genericType_3)
-  //       assert.equal(alias_3,'ProductsPerUser')
-
-  //       var genericType_4 = 'Paged<Product, User>'
-  //       var getAlias_4 = getGenericAlias()
-  //       var alias_4 = getAlias_4(genericType_4)
-  //       assert.equal(alias_4,'PagedProductUser')
-  //     })))
 
   describe('graphqls2s', () => 
     describe('#transpileSchema', () => {
@@ -537,7 +510,7 @@ var runtest = function(s2s, assert) {
         # }
         # \`\`\`
         type Page {
-          # The pagination parameter sent in the query
+          # The pagination parameter sent in the query (type, input {})
           first: Int!
 
           # The pagination parameter sent in the query
@@ -556,7 +529,7 @@ var runtest = function(s2s, assert) {
         type DatasetSize {
           size: Int!
           pages: Int!
-        }
+        }}
         `
         var schema_output = `
         # ### Page - Pagination Metadata
@@ -583,7 +556,7 @@ var runtest = function(s2s, assert) {
         # }
         # \`\`\`
         type Page {
-            # The pagination parameter sent in the query
+            # The pagination parameter sent in the query (type, input {})
             first: Int!
             # The pagination parameter sent in the query
             skip: Int!
@@ -605,7 +578,51 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('11 - DIRECTIVES: Should support directives.', () => {
+      it('11 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks from inherited types (bug #15).', () => {
+        var schema = `
+        # The most generic type of item. See also: schema.org/Thing
+        type Thing {
+          description: String
+          identifier: ID!
+          name: String
+          url: String
+        }
+
+        # A person (alive, dead, undead, or fictional). See also: schema.org/Person
+        type Person inherits Thing {
+          # Person Blabla
+          email: String
+          familyName: String
+          givenName: String
+        }
+        `
+        var schema_output = `
+        # The most generic type of item. See also: schema.org/Thing
+        type Thing {
+          description: String
+          identifier: ID!
+          name: String
+          url: String
+        }
+
+        # A person (alive, dead, undead, or fictional). See also: schema.org/Person
+        type Person {
+          description: String
+          identifier: ID!
+          name: String
+          url: String
+          # Person Blabla
+          email: String
+          familyName: String
+          givenName: String
+        }`
+        var output = transpileSchema(schema)
+        //console.log(output)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
+      it('12 - DIRECTIVES: Should support directives.', () => {
 
         var schema = `
         directive @isAuthenticated on QUERY | FIELD
@@ -668,7 +685,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('12 - DIRECTIVES: Should support directive after generic type.', () => {
+      it('13 - DIRECTIVES: Should support directive after generic type.', () => {
 
         var schema = `
         directive @isAuthenticated on QUERY | FIELD
@@ -745,7 +762,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('13 - INHERITANCE: Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
+      it('14 - INHERITANCE: Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
         var output = transpileSchema(`
         type Person {
           firstname: String
@@ -772,7 +789,7 @@ var runtest = function(s2s, assert) {
         `)
         assert.equal(answer,correct)
       })
-      it('14 - INHERITANCE: Should add properties from the super type to the sub type.', () => {
+      it('15 - INHERITANCE: Should add properties from the super type to the sub type.', () => {
         var output = transpileSchema(`
         type Post {
           id: ID! 
@@ -797,7 +814,7 @@ var runtest = function(s2s, assert) {
         `)
         assert.equal(answer,correct)
       })
-      it('15 - INHERITANCE: Should support multiple inheritance type.', () => {
+      it('16 - INHERITANCE: Should support multiple inheritance type.', () => {
         var output = transpileSchema(`
         type Name {  
           name: String! 
@@ -823,7 +840,7 @@ var runtest = function(s2s, assert) {
         }`)
         assert.equal(answer,correct)
       })
-      it('16 - INHERITANCE: Should support multiple inheritance type with implements interface.', () => {
+      it('17 - INHERITANCE: Should support multiple inheritance type with implements interface.', () => {
         var output = transpileSchema(`
         interface Node  {  
           id: Int! 
@@ -857,7 +874,7 @@ var runtest = function(s2s, assert) {
         }`)
         assert.equal(answer,correct)
       })
-      it('17 - INHERITANCE: Should throw an error if inherited type is missing.', () => {
+      it('18 - INHERITANCE: Should throw an error if inherited type is missing.', () => {
         assert.throws(() => 
           transpileSchema(`
           type Name {  
