@@ -26,6 +26,7 @@ const removeDirectives = (schema = '') => {
 	if (!schema)
 		return { schema, directives:null }
 
+	console.log('REMOVE: ', schema)
 	schema += '_cr_'
 	const directives = []
 	const d = schema.match(/directive\s(.*?)@(.*?)(\((.*?)\)\son\s(.*?)_cr_|\son\s(.*?)_cr_)/mg) || []
@@ -46,6 +47,9 @@ const removeDirectives = (schema = '') => {
 
 		directives.push({ name: directiveName.replace('@',''), body: directive, directive: true, directiveValues: instances })
 	})
+
+	console.log('NO DIR:', schema)
+	console.log('MISSING DRI: ', schema.match(/_cr_(.*?)@_cr_/g))
 
 	return { schema, directives }
 }
@@ -128,6 +132,9 @@ const extractGraphMetadata = (schema = '') => {
 const removeGraphMetadata = (schema = '') => {
 	const meta = extractGraphMetadata(schema) || []
 	const directives = meta.filter(m => m.directive)
+	console.log('S: ', schema)
+	console.log('M: ', meta)
+	console.log('D: ', JSON.stringify(directives, null, '  '))
 	const schemaWithNoMeta = (reinsertDirectives(meta.escSchema.replace(/@(.*?)_cr_/g, ''), directives) || '').replace(/_cr_/g, '\n')
 	return { stdSchema: schemaWithNoMeta, metadata: meta }
 
