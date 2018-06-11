@@ -19,15 +19,15 @@ const INHERITSREGEX = /inherits\s+\w+(?:\s*,\s*\w+)*/g
 const IMPLEMENTSREGEX = /implements\s(.*?)\{/mg
 const PROPERTYPARAMSREGEX = /\((.*?)\)/
 
-const TYPE_REGEX = { regex: /(extend type|type)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'type' }
-const INPUT_REGEX = { regex: /(extend input|input)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'input' }
-const ENUM_REGEX = { regex: /enum\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'enum' }
-const INTERFACE_REGEX = { regex: /(extend interface|interface)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'interface' }
-const ABSTRACT_REGEX = { regex: /(extend abstract|abstract)\s(.*?){(.*?)_cr_([^#]*?)}/mg, type: 'abstract' }
+const TYPE_REGEX = { regex: /(extend type|type)\s(.*?){(.*?)░([^#]*?)}/mg, type: 'type' }
+const INPUT_REGEX = { regex: /(extend input|input)\s(.*?){(.*?)░([^#]*?)}/mg, type: 'input' }
+const ENUM_REGEX = { regex: /enum\s(.*?){(.*?)░([^#]*?)}/mg, type: 'enum' }
+const INTERFACE_REGEX = { regex: /(extend interface|interface)\s(.*?){(.*?)░([^#]*?)}/mg, type: 'interface' }
+const ABSTRACT_REGEX = { regex: /(extend abstract|abstract)\s(.*?){(.*?)░([^#]*?)}/mg, type: 'abstract' }
 const SCALAR_REGEX = { regex: /(.{1}|.{0})scalar\s(.*?)([^\s]*?)(?![a-zA-Z0-9])/mg, type: 'scalar' }
 const UNION_REGEX = { regex: /(.{1}|.{0})union([^\n]*?)\n/gm, type: 'union' }
 
-const carrReturnEsc = '_cr_'
+const carrReturnEsc = '░'
 const tabEsc = '_t_'
 
 let _s = {}
@@ -57,8 +57,8 @@ const escapeGraphQlSchemaPlus = (sch, cr, t) => {
  */
 const getSchemaBits = (sch='') => {
 	const escapedSchemaWithComments = escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc)
-	const { schema:escSchemaWithEscComments, tokens } = (escapedSchemaWithComments.match(/#(.*?)_cr_/g) || []).reduce((acc,m) => {
-		const commentToken = `#${newShortId()}_cr_`
+	const { schema:escSchemaWithEscComments, tokens } = (escapedSchemaWithComments.match(/#(.*?)░/g) || []).reduce((acc,m) => {
+		const commentToken = `#${newShortId()}░`
 		acc.schema = acc.schema.replace(m, commentToken)
 		acc.tokens.push({ id: commentToken, value: m })
 		return acc
@@ -78,7 +78,7 @@ const getSchemaBits = (sch='') => {
 			rx.type == 'scalar' ? regexMatches.filter(m => m.indexOf('scalar') == 0 || m.match(/^(?![a-zA-Z0-9])/)) :
 			rx.type == 'union' ? regexMatches.filter(m => m.indexOf('union') == 0 || m.match(/^(?![a-zA-Z0-9])/)) : regexMatches)
 		// 3. Replace the excaped comments with their true value
-		.next(regexMatches => regexMatches.map(b => (b.match(/#(.*?)_cr_/g) || []).reduce((acc,m) => {
+		.next(regexMatches => regexMatches.map(b => (b.match(/#(.*?)░/g) || []).reduce((acc,m) => {
 			const value = (tokens.find(t => t.id == m) || {}).value
 			return value ? acc.replace(m, value) : acc
 		}, b)))
@@ -93,7 +93,7 @@ const getSchemaBits = (sch='') => {
 }
 
 const breakdownSchemabBit = str => {
-	const blockMatch = str.match(/{(.*?)_cr_([^#]*?)}/)
+	const blockMatch = str.match(/{(.*?)░([^#]*?)}/)
 	if (!blockMatch) { 
 		const msg = 'Schema error: Missing block'
 		log(msg)
@@ -128,7 +128,7 @@ const getSchemaEntity = firstLine =>
 	{ type: null, name: null }
 
 const getCommentsBits = (sch) => 
-	(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(/#(.*?)_cr_([^#]*?)({|:)/g) || [])
+	(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(/#(.*?)░([^#]*?)({|:)/g) || [])
 	.filter(x => x.match(/{$/))
 	.map(c => {
 		const parts = _(c.split(carrReturnEsc).map(l => l.replace(/_t_/g, '    ').trim())).filter(x => x != '')
@@ -702,7 +702,7 @@ const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(ge
 			return v.concat(directives.map(d => ({ 
 				type: 'DIRECTIVE',
 				name: d.name,
-				raw: (d.body || '').replace(/_cr_/g, '\n'),
+				raw: (d.body || '').replace(/░/g, '\n'),
 				extend: false,
 				metadata: null,
 				genericType: null,

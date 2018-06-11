@@ -8,12 +8,12 @@
 const _ = require('lodash')
 const { chain, log, escapeGraphQlSchema, removeMultiSpaces, matchLeftNonGreedy, newShortId } = require('./utilities')
 
-const carrReturnEsc = '_cr_'
+const carrReturnEsc = '░'
 const tabEsc = '_t_'
 
 /**
  * Remove directives
- * @param  {String} schema 										Escaped schema (i.e., without tabs or carriage returns. The CR have been replaced by '_cr_' ) 
+ * @param  {String} schema 										Escaped schema (i.e., without tabs or carriage returns. The CR have been replaced by '░' ) 
  * @return {String} output.schema 								Schema without directives
  * @return {Array} 	output.directives
  * @return {String} output.directives[0].name  					Directive's name
@@ -26,21 +26,20 @@ const removeDirectives = (schema = '') => {
 	if (!schema)
 		return { schema, directives:null }
 
-	console.log('REMOVE: ', schema)
-	schema += '_cr_'
+	schema += '░'
 	const directives = []
-	const d = schema.match(/directive\s(.*?)@(.*?)(\((.*?)\)\son\s(.*?)_cr_|\son\s(.*?)_cr_)/mg) || []
+	const d = schema.match(/directive\s(.*?)@(.*?)(\((.*?)\)\son\s(.*?)░|\son\s(.*?)░)/mg) || []
 	d.forEach(directive => {
-		const directiveName = directive.match(/@(.*?)\s/)[0].replace(/(_cr_)\s/g,'').trim()
+		const directiveName = directive.match(/@(.*?)\s/)[0].replace(/(░)\s/g,'').trim()
 		schema = schema.replace(directive, '')
-		if (!schema.match(/_cr_$/))
-			schema += '_cr_'
+		if (!schema.match(/░$/))
+			schema += '░'
 
-		const dInstances = schema.match(new RegExp(`${directiveName}(.*?)_cr_`, 'g')) || []
+		const dInstances = schema.match(new RegExp(`${directiveName}(.*?)░`, 'g')) || []
 		const instances = []
 		dInstances.forEach(dInst => {
 			const id = `_${newShortId()}_`
-			const inst = dInst.replace(/_cr_$/,'')
+			const inst = dInst.replace(/░$/,'')
 			schema = schema.replace(inst, id)
 			instances.push({ id, value: inst })
 		})
@@ -48,8 +47,33 @@ const removeDirectives = (schema = '') => {
 		directives.push({ name: directiveName.replace('@',''), body: directive, directive: true, directiveValues: instances })
 	})
 
-	console.log('NO DIR:', schema)
-	console.log('MISSING DRI: ', schema.match(/_cr_(.*?)@_cr_/g))
+	// Get the rogue directives, i.e., the directives defined immediately after a field (must be on the same line)
+	// and have not been escaped before because they do not have an explicit definition in the current schema (scenario
+	// of AWS AppSync where the @aws_subscribe is defined outside of the developer reach)
+	// 
+	// IMPORTANT: The code below mutates the 'schema' variable
+	const rogueDirectives = (schema.match(/░\s*[a-zA-Z0-9_]+([^░]*?)@(.*?)░/g) || [])
+	.map(m => m.replace(/^(.*?)@/, '@').replace(/\s*░$/, ''))
+	.reduce((acc,m) => {
+		const directiveName = m.match(/^@[a-zA-Z0-9_]+/)[0].slice(1)
+		const directiveInstanceId = `_${newShortId()}_`
+		schema = schema.replace(m, directiveInstanceId)
+		if (acc[directiveName]) 
+			acc[directiveName].directiveValues.push({ id: directiveInstanceId, value: m })
+		else {
+			acc.push(directiveName)
+			acc[directiveName] = {
+				name: directiveName,
+				body: '',
+				directive: true,
+				directiveValues: [{ id: directiveInstanceId, value: m }]
+			}
+		}
+		return acc
+	}, [])
+	
+	if (rogueDirectives.length > 0)
+		directives.push(...rogueDirectives.map(x => rogueDirectives[x]))
 
 	return { schema, directives }
 }
@@ -58,7 +82,7 @@ const reinsertDirectives = (schema='', directives=[]) => {
 	if (!schema)
 		return schema
 
-	const directiveDefinitions = directives.map(x => x.body).join('_cr_')
+	const directiveDefinitions = directives.map(x => x.body).join('░')
 	directives.forEach(({ directiveValues=[] }) => directiveValues.forEach(({ id, value }) => {
 		schema = schema.replace(id, value)
 	}))
@@ -82,7 +106,7 @@ const reinsertDirectives = (schema='', directives=[]) => {
  */
 const extractGraphMetadata = (schema = '') => {
 	const { schema:escSchema, directives } = removeDirectives(escapeGraphQlSchema(schema, carrReturnEsc, tabEsc).replace(/_t_/g, ' '))
-	const attrMatches = escSchema.match(/@(.*?)(_cr_)(.*?)({|_cr_)/mg)
+	const attrMatches = escSchema.match(/@(.*?)(░)(.*?)({|░)/mg)
 	let graphQlMetadata = chain(_(attrMatches).map(m => chain(m.split(carrReturnEsc)).next(parts => {
 		if (parts.length < 2) 
 			throw new Error(`Schema error: Misused metadata attribute in '${parts.join(' ')}.'`)
@@ -106,7 +130,7 @@ const extractGraphMetadata = (schema = '') => {
 				.next(m2 => {
 					if (!m2) throw new Error(`Schema error: Property '${value}' with metadata '@${value}' does not live within any schema type (e.g. type, enum, interface, input, ...)`)
 					const parentSchemaType = m2[1].trim().toUpperCase()
-					const parentSchemaTypeName = m2[2].replace(/{/g, ' ').replace(/_cr_/g, ' ').trim().split(' ')[0]
+					const parentSchemaTypeName = m2[2].replace(/{/g, ' ').replace(/░/g, ' ').trim().split(' ')[0]
 					return { type: parentSchemaType, name: parentSchemaTypeName }
 				})
 				.val()
@@ -132,13 +156,8 @@ const extractGraphMetadata = (schema = '') => {
 const removeGraphMetadata = (schema = '') => {
 	const meta = extractGraphMetadata(schema) || []
 	const directives = meta.filter(m => m.directive)
-	console.log('S: ', schema)
-	console.log('M: ', meta)
-	console.log('D: ', JSON.stringify(directives, null, '  '))
-	const schemaWithNoMeta = (reinsertDirectives(meta.escSchema.replace(/@(.*?)_cr_/g, ''), directives) || '').replace(/_cr_/g, '\n')
+	const schemaWithNoMeta = (reinsertDirectives(meta.escSchema.replace(/@(.*?)░/g, ''), directives) || '').replace(/░/g, '\n')
 	return { stdSchema: schemaWithNoMeta, metadata: meta }
-
-	//escapeGraphQlSchema(schema, carrReturnEsc, tabEsc).replace(/_t_/g, ' ').replace(/@(.*?)_cr_/g, '').replace(/_cr_/g, '\n')
 }
 
 module.exports = {

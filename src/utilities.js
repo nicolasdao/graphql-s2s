@@ -35,7 +35,7 @@ const log = (msg, name, transformFn) => chain(name ? `${name}: ${typeof(msg) != 
  * @param  {String} t   Tab replacement
  * @return {String}     Escaped text
  */
-const escapeGraphQlSchema = (sch, cr='_cr_', t=' ') => sch.replace(/[\n\r]+/g, cr).replace(/[\t\r]+/g, t).replace(/\s+/g, ' ')
+const escapeGraphQlSchema = (sch, cr='░', t=' ') => sch.replace(/[\n\r]+/g, cr).replace(/[\t\r]+/g, t).replace(/\s+/g, ' ')
 const removeMultiSpaces = s => s.replace(/ +(?= )/g,'')
 const matchLeftNonGreedy = (str, startChar, endChar) => chain(str.match(new RegExp(`${startChar}(.*?)${endChar}`)))
     .next(m => m && m.length > 0
