@@ -55,6 +55,7 @@ const removeDirectives = (schema = '') => {
 	const rogueDirectives = (schema.match(/░\s*[a-zA-Z0-9_]+([^░]*?)@(.*?)░/g) || [])
 	.map(m => m.replace(/^(.*?)@/, '@').replace(/\s*░$/, ''))
 	.reduce((acc,m) => {
+		m = m.trim().replace(/{$/, '')
 		const directiveName = m.match(/^@[a-zA-Z0-9_]+/)[0].slice(1)
 		const directiveInstanceId = `_${newShortId()}_`
 		schema = schema.replace(m, directiveInstanceId)
@@ -71,7 +72,7 @@ const removeDirectives = (schema = '') => {
 		}
 		return acc
 	}, [])
-	
+
 	if (rogueDirectives.length > 0)
 		directives.push(...rogueDirectives.map(x => rogueDirectives[x]))
 

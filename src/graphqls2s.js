@@ -399,6 +399,8 @@ const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 			const inheritsMatch = typeDef.match(INHERITSREGEX)
 			const superClass = inheritsMatch && inheritsMatch[0].replace('inherits', '').trim().split(',').map(v => v.trim()) || null
 			const implementsMatch = typeDef.match(IMPLEMENTSREGEX)
+			const directive = (typeDef.match(/@[a-zA-Z0-9_]+(.*?)$/) || [''])[0].trim().replace(/{$/, '').trim() || null
+
 			const _interface = implementsMatch 
 				? implementsMatch[0].replace('implements ', '').replace('{', '').split(',').map(x => x.trim().split(' ')[0]) 
 				: null
@@ -415,7 +417,8 @@ const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 				type: objectType, 
 				extend: d.extend,
 				name: name, 
-				metadata: metadat, 
+				metadata: metadat,
+				directive: directive, 
 				genericType: isGenericType, 
 				blockProps: getBlockProperties(d.block, baseObj, metadata), 
 				inherits: superClass, 
@@ -476,6 +479,7 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 			genericType: obj.genericType,
 			originalBlockProps: obj.blockProps,
 			metadata: obj.metadata || _.last(superClassesWithInheritance).metadata || null,
+			directive: obj.directive,
 			implements: _.toArray(_.uniq(_.concat(obj.implements, superClassesWithInheritance.implements).filter(function(x) {
 				return x
 			}))),
@@ -536,10 +540,10 @@ const addComments = (obj, comments) => {
 	return obj
 }
 
-const parseSchemaObjToString = (comments, type, name, _implements, blockProps, extend=false) => 
+const parseSchemaObjToString = (comments, type, name, _implements, blockProps, extend=false, directive) => 
 	[
 		`${comments && comments != '' ? `\n${comments}` : ''}`, 
-		`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name.replace('!', '')}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} ${blockProps.some(x => x) ? '{': ''} `,
+		`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name.replace('!', '')}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} ${blockProps.some(x => x) ? `${directive ? ` ${directive} ` : ''}{`: ''} `,
 		blockProps.map(prop => `    ${prop.comments != '' ? `${prop.comments}\n    ` : ''}${prop.value}`).join('\n'),
 		blockProps.some(x => x) ? '}': ''
 	].filter(x => x).join('\n')
@@ -648,7 +652,7 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 const buildSchemaString = (schemaObjs=[]) => {
 	const part_01 = schemaObjs
 		.filter(x => !x.genericType && x.type != 'ABSTRACT' && x.type != 'DIRECTIVE')
-		.map(obj => parseSchemaObjToString(obj.comments, obj.type, obj.name, obj.implements, obj.blockProps, obj.extend))
+		.map(obj => parseSchemaObjToString(obj.comments, obj.type, obj.name, obj.implements, obj.blockProps, obj.extend, obj.directive))
 		.join('\n')
 	
 	const resolvedGenericTypes = {}
@@ -658,6 +662,7 @@ const buildSchemaString = (schemaObjs=[]) => {
 	
 	const part_02 = _(resolvedGenericTypes).map(x => x.stringObj).join('\n')
 	const directives = schemaObjs.filter(x => x.type == 'DIRECTIVE' && x.raw).map(x => x.raw).join('')
+
 	return directives + '\n' + part_01 + part_02
 }
 

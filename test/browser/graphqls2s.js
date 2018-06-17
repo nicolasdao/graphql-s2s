@@ -771,10 +771,14 @@ var runtest = function(s2s, assert) {
         type Subscription {
           nameCreated: Name @aws_subscribe(mutations:["createName"])
         }
-        
-        type Name {
+
+        type Name @cacheControl(maxAge: 240) {
           @node
           name: String!
+        }
+
+        type Surname inherits Name @cacheControl(maxAge: 240) {
+          alias: String
         }`
         
         var schema_output = `
@@ -787,8 +791,13 @@ var runtest = function(s2s, assert) {
           nameCreated: Name @aws_subscribe(mutations:["createName"])
         }
       
-        type Name {
+        type Name @cacheControl(maxAge: 240) {
           name: String!
+        }
+
+        type Surname @cacheControl(maxAge: 240) {
+          name: String!
+          alias: String
         }`
         var output = transpileSchema(schema)
         var answer = compressString(output)
