@@ -940,7 +940,7 @@ var runtest = function(s2s, assert) {
           'Schema error: type PostUserRating cannot inherit from INPUT Name.'
         )
       })
-      it('21 - INHERITANCE: Should inherit from an INTERFACE.', () => {
+      it('21 - INHERITANCE: Should support inheriting from an INTERFACE.', () => {
         var schema = `
           interface Name {  
             name: String! 
@@ -964,6 +964,31 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
+      it('22 - INHERITANCE: Should support inheriting from an INTERFACE and implementing it.', () => {
+        var schema = `
+          interface Name {  
+            name: String! 
+          }
+          type PostUserRating inherits Name implements Name {
+            rating: String!
+          }`
+
+        var schema_output = `
+          interface Name {  
+            name: String! 
+          }
+          type PostUserRating implements Name{
+            name: String!
+            rating: String!
+          }`
+
+
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
+      
     }))
 
   describe('graphqls2s', () => 
