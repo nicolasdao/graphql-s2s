@@ -186,7 +186,7 @@ For a concrete example, refer to the [code below](#deconstructing-transforming-r
 _WARNING: the following examples will be based on '[graphql-tools](https://github.com/apollographql/graphql-tools)' from the Apollo team, but the string schema could also be used with the 'buildSchema' method from graphql.js_
 
 ### Type Inheritance
-_NOTE: The examples below only use 'type', but it would also work on 'input'_
+_NOTE: The examples below only use 'type', but it would also work on 'input' and 'interface'_
 
 __*Before graphql-s2s*__
 ```js
@@ -650,7 +650,7 @@ This sets an environment variable that configure the project to load the main de
 ## Step 2. Compile & Rerun Your Test Before Pushing
 ```
 npm run dev
-npm run built
+npm run build
 npm test
 ```
 This project is built using Javascript ES6. Each version is also transpiled to ES5 using Babel through Webpack 2, so this project can run in the browser. In order to write unit test only once instead of duplicating it for each version of Javascript, the all unit tests have been written using Javascript ES5 in mocha. That means that if you want to test the project after some changes, you will need to first transpile the project to ES5. 
