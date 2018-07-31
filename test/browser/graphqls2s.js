@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2017, Neap Pty Ltd.
  * All rights reserved.
- * 
+ *
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
 */
@@ -15,7 +15,7 @@ var assert = browserctxt ? chai.assert : null
 function normalizeString(s) {
   if (s) {
     return s.replace(/\n|\t|\s/g, '')
-  } 
+  }
   else
     return ''
 }
@@ -29,7 +29,7 @@ var runtest = function(s2s, assert) {
   var buildQuery = s2s.buildQuery
   var isTypeGeneric = s2s.isTypeGeneric
 
-  describe('graphqls2s', () => 
+  describe('graphqls2s', () =>
     describe('#transpileSchema', () => {
       it('01 - BASICS: Should not affect a standard schema after transpilation.', () => {
         var output = transpileSchema(`
@@ -332,7 +332,7 @@ var runtest = function(s2s, assert) {
         assert.equal(answer_02,correct_02)
 
         // More complicated test
-        
+
         var schema_03 = `
         type AnotherDeeperGeneric<T> {
           data: T
@@ -455,7 +455,76 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('09 - METADATA: Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
+      it('09 - GENERIC TYPES: Should create a new type or input for each instance of a generic type, even for generic with multi-types and inputs, as well as removing the original generic input definition.', () => {
+
+        var schema = `
+        type Query {
+          user(identifier:ID!):User,
+          users(filter: Filter<UserFilterFields>):User
+        }
+        
+        input Filter<FilterFields> {
+          field: FilterFields!,
+          value: String!
+        }
+        
+        enum UserFilterFields {
+          firstName
+          lastName
+        }
+        
+        type StandardData<T,U> {
+          id: ID!
+          value: T
+          Dimension: U
+        }
+        
+        type Paged<T,U> {
+          data: [StandardData< T, U>]
+          cursor: ID
+        }
+        
+        type User {
+          firstName: String,
+          lastName: String,
+          posts: Paged<Post, Date>
+        }
+        `
+        var schema_output = `
+        type Query { 
+            user(identifier: ID!): User
+            users(filter: FilterUserFilterFields): User
+        }
+        type User { 
+            firstName: String
+            lastName: String
+            posts: PagedPostDate
+        }
+        enum UserFilterFields { 
+            firstName
+            lastName
+        }
+        input FilterUserFilterFields { 
+            field: UserFilterFields!
+            value: String!
+        }
+        type StandardDataPostDate { 
+            id: ID!
+            value: Post
+            Dimension: Date
+        }
+        type PagedPostDate { 
+            data: [StandardDataPostDate]
+            cursor: ID
+        }
+        `
+
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
+      it('10 - METADATA: Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
         var output = transpileSchema(`
         @node
         type Brand {
@@ -484,7 +553,7 @@ var runtest = function(s2s, assert) {
         `)
         assert.equal(answer,correct)
       })
-      it('10 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
+      it('11 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
         var schema = `
         # ### Page - Pagination Metadata
         # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
@@ -578,7 +647,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('11 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks from inherited types (bug #15).', () => {
+      it('12 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks from inherited types (bug #15).', () => {
         var schema = `
         # The most generic type of item. See also: schema.org/Thing
         type Thing {
@@ -622,7 +691,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('12 - DIRECTIVES: Should support directives.', () => {
+      it('13 - DIRECTIVES: Should support directives.', () => {
 
         var schema = `
         directive @isAuthenticated on QUERY | FIELD
@@ -685,7 +754,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('13 - DIRECTIVES: Should support directive after generic type.', () => {
+      it('14 - DIRECTIVES: Should support directive after generic type.', () => {
         var schema = `
         directive @isAuthenticated on QUERY | FIELD
         directive @deprecated
@@ -761,7 +830,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('14 - DIRECTIVES: Should supports rogue native directives, i.e., native directive without explicit definitions (fix #14).', () => {
+      it('15 - DIRECTIVES: Should supports rogue native directives, i.e., native directive without explicit definitions (fix #14).', () => {
         var schema = `
         # Mutation
         type Mutation {
@@ -780,7 +849,7 @@ var runtest = function(s2s, assert) {
         type Surname inherits Name @cacheControl(maxAge: 240) {
           alias: String
         }`
-        
+
         var schema_output = `
         # Mutation
         type Mutation {
@@ -804,7 +873,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('15 - INHERITANCE: Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
+      it('16 - INHERITANCE: Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
         var output = transpileSchema(`
         type Person {
           firstname: String
@@ -831,7 +900,7 @@ var runtest = function(s2s, assert) {
         `)
         assert.equal(answer,correct)
       })
-      it('16 - INHERITANCE: Should add properties from the super type to the sub type.', () => {
+      it('17 - INHERITANCE: Should add properties from the super type to the sub type.', () => {
         var output = transpileSchema(`
         type Post {
           id: ID! 
@@ -856,7 +925,7 @@ var runtest = function(s2s, assert) {
         `)
         assert.equal(answer,correct)
       })
-      it('17 - INHERITANCE: Should support multiple inheritance type.', () => {
+      it('18 - INHERITANCE: Should support multiple inheritance type.', () => {
         var output = transpileSchema(`
         type Name {  
           name: String! 
@@ -882,7 +951,7 @@ var runtest = function(s2s, assert) {
         }`)
         assert.equal(answer,correct)
       })
-      it('18 - INHERITANCE: Should support multiple inheritance type with implements interface.', () => {
+      it('19 - INHERITANCE: Should support multiple inheritance type with implements interface.', () => {
         var output = transpileSchema(`
         interface Node  {  
           id: Int! 
@@ -916,20 +985,20 @@ var runtest = function(s2s, assert) {
         }`)
         assert.equal(answer,correct)
       })
-      it('19 - INHERITANCE: Should throw an error if inherited type is missing.', () => {
-        assert.throws(() => 
+      it('20 - INHERITANCE: Should throw an error if inherited type is missing.', () => {
+        assert.throws(() =>
           transpileSchema(`
           type Name {  
             name: String! 
           }
           type PostUserRating inherits Name,Author {
             rating: String!
-          }`), 
+          }`),
           'Schema error: type PostUserRating cannot find inherited type Author'
         )
       })
-      it('20 - INHERITANCE: Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'".', () => {
-        assert.throws(() => 
+      it('21 - INHERITANCE: Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'".', () => {
+        assert.throws(() =>
           transpileSchema(`
           interface Name {  
             name: String! 
@@ -942,8 +1011,8 @@ var runtest = function(s2s, assert) {
       })
     }))
 
-  describe('graphqls2s', () => 
-    describe('#isTypeGeneric', () => 
+  describe('graphqls2s', () =>
+    describe('#isTypeGeneric', () =>
       it('Should test whether or not a type is a generic type based on predefined type constraints.', () => {
 
         assert.isOk(isTypeGeneric('T', 'T'), '\'T\', \'T\' should work.')
@@ -956,8 +1025,8 @@ var runtest = function(s2s, assert) {
         assert.isOk(!isTypeGeneric('[Paged<Product>]', 'T'), '\'[Paged<Product>]\', \'T\' should NOT work.')
       })))
 
-  describe('graphqls2s', () => 
-    describe('#extractGraphMetadata: EXTRACT METADATA', () => 
+  describe('graphqls2s', () =>
+    describe('#extractGraphMetadata: EXTRACT METADATA', () =>
       it('Should extract all metadata (i.e. data starting with \'@\') located on top of schema types of properties.', () => {
         var output = extractGraphMetadata(`
         @node
@@ -1002,7 +1071,7 @@ var runtest = function(s2s, assert) {
         assert.equal(meta2.parent.metadata.name, 'node')
       })))
 
-  describe('graphqls2s', () => 
+  describe('graphqls2s', () =>
     describe('#getSchemaAST', () => {
       it('01 - BASICS: Should extract all types and their properties including their respective comments.', () => {
         var schema = `
@@ -1178,7 +1247,7 @@ var runtest = function(s2s, assert) {
       })
     }))
 
-  describe('graphqls2s', () => 
+  describe('graphqls2s', () =>
     describe('#getQueryAST', () => {
       it('01 - GET METADATA: Should retrieve all metadata associated to the query.', () => {
 
@@ -1420,7 +1489,7 @@ var runtest = function(s2s, assert) {
       })
     }))
 
-  describe('graphqls2s', () => 
+  describe('graphqls2s', () =>
     describe('#buildQuery', () => {
       it('01 - REBUILD QUERY FROM QUERY AST: Should rebuild the query exactly similar to its original based on the query AST.', () => {
         var schema = `
@@ -1691,7 +1760,7 @@ var runtest = function(s2s, assert) {
         var queryAST = getQueryAST(query_input, null, schemaAST)
 
         var filteredQueryAST = queryAST.filter(a => !a.metadata || a.metadata.name != 'auth')
-        
+
         var query = normalizeString(query_filtered)
 
         var queryAnswer = normalizeString(buildQuery(filteredQueryAST))
@@ -2176,7 +2245,7 @@ var runtest = function(s2s, assert) {
         assert.equal(normalizeString(rebuiltQuery), normalizeString(query))
       })
     }))
-} 
+}
 
 if (browserctxt) runtest(graphqls2s, assert)
 

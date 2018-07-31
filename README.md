@@ -406,18 +406,29 @@ type Question inherits Node {
 	text: String!
 }
 
+input Filter<FilterFields> {
+  field: FilterFields!,
+  value: String!
+}
+
+enum TeachersFilterFields {
+  firstName
+  lastName
+}
+
 type Query {
   # ### GET all users
   #
   students: Paged<Student>
 
   # ### GET all teachers
+  # You can use generic types on parameters, too.
   #
-  teachers: Paged<Teacher>
+  teachers(filter: Filter<TeachersFilterFields>): Paged<Teacher>
 }
 `
 ```
-This is very similar to C# or Java generic classes. What the transpiler will do is to simply recreate 3 types (one for Paged\<Question\>, Paged\<Student\> and Paged\<Teacher\>). If we take the Paged\<Question\> example, the transpiled type will be:
+This is very similar to C# or Java generic classes. What the transpiler will do is to simply recreate 3 types (one for Paged\<Question\>, Paged\<Student\> and Paged\<Teacher\>), and one input (Filter\<TeachersFilterFields\>). If we take the Paged\<Question\> example, the transpiled type will be:
 ```js
 type PagedQuestion {
 	data: [Question]
@@ -650,7 +661,7 @@ This sets an environment variable that configure the project to load the main de
 ## Step 2. Compile & Rerun Your Test Before Pushing
 ```
 npm run dev
-npm run built
+npm run build
 npm test
 ```
 This project is built using Javascript ES6. Each version is also transpiled to ES5 using Babel through Webpack 2, so this project can run in the browser. In order to write unit test only once instead of duplicating it for each version of Javascript, the all unit tests have been written using Javascript ES5 in mocha. That means that if you want to test the project after some changes, you will need to first transpile the project to ES5. 

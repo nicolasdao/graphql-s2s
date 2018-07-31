@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2018, Neap Pty Ltd.
  * All rights reserved.
- * 
+ *
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
 */
@@ -44,13 +44,13 @@ const escapeGraphQlSchemaPlus = (sch, cr, t) => {
 /**
  * Gets a first rough breakdown of the string schema
  * @param  {String} sch Original GraphQl Schema
- * @return {Array}      Using regex, the interfaces, types, inputs, enums and abstracts entities are isolated 
- *                      e.g. [{ 
- *                      		property: 'type Query { bars: [Bar]! }', 
+ * @return {Array}      Using regex, the interfaces, types, inputs, enums and abstracts entities are isolated
+ *                      e.g. [{
+ *                      		property: 'type Query { bars: [Bar]! }',
  *                      		block: [ 'bars: [Bar]!' ],
  *                      		extend: false
- *                      	},{ 
- *                      		property: 'type Bar { id: ID }', 
+ *                      	},{
+ *                      		property: 'type Bar { id: ID }',
  *                      		block: [ 'id: ID' ],
  *                      		extend: false
  *                      	}]
@@ -64,17 +64,17 @@ const getSchemaBits = (sch='') => {
 		return acc
 	}, { schema: escapedSchemaWithComments, tokens: [] })
 	// We append '\n' to help isolating the 'union'
-	const schemaWithoutComments = ' ' + sch.replace(/#(.*?)\n/g, '') + '\n' 
+	const schemaWithoutComments = ' ' + sch.replace(/#(.*?)\n/g, '') + '\n'
 	const escapedSchemaWithoutComments = escapeGraphQlSchemaPlus(schemaWithoutComments, carrReturnEsc, tabEsc)
 	return _.flatten([TYPE_REGEX, INPUT_REGEX, ENUM_REGEX, INTERFACE_REGEX, ABSTRACT_REGEX, SCALAR_REGEX, UNION_REGEX]
-	.map(rx => 
-		// 1. Apply the regex matching 
+	.map(rx =>
+		// 1. Apply the regex matching
 		chain((
-			rx.type == 'scalar' ? escapedSchemaWithoutComments : 
-			rx.type == 'union' ? schemaWithoutComments : 
+			rx.type == 'scalar' ? escapedSchemaWithoutComments :
+			rx.type == 'union' ? schemaWithoutComments :
 			escSchemaWithEscComments).match(rx.regex) || [])
 		// 2. Filter the right matches
-		.next(regexMatches => 
+		.next(regexMatches =>
 			rx.type == 'scalar' ? regexMatches.filter(m => m.indexOf('scalar') == 0 || m.match(/^(?![a-zA-Z0-9])/)) :
 			rx.type == 'union' ? regexMatches.filter(m => m.indexOf('union') == 0 || m.match(/^(?![a-zA-Z0-9])/)) : regexMatches)
 		// 3. Replace the excaped comments with their true value
@@ -84,8 +84,8 @@ const getSchemaBits = (sch='') => {
 		}, b)))
 		// 4. Breackdown each match into 'property', 'block' and 'extend'
 		.next(regexMatches => {
-			const transform = 
-				rx.type == 'scalar' ? breakdownScalarBit : 
+			const transform =
+				rx.type == 'scalar' ? breakdownScalarBit :
 				rx.type == 'union' ? breakdownUnionBit : breakdownSchemabBit
 			return regexMatches.map(str => transform(str))
 		})
@@ -94,7 +94,7 @@ const getSchemaBits = (sch='') => {
 
 const breakdownSchemabBit = str => {
 	const blockMatch = str.match(/{(.*?)░([^#]*?)}/)
-	if (!blockMatch) { 
+	if (!blockMatch) {
 		const msg = 'Schema error: Missing block'
 		log(msg)
 		throw new Error(msg)
@@ -102,7 +102,7 @@ const breakdownSchemabBit = str => {
 
 	const block = _.toArray(_(blockMatch[0].replace(/_t_/g, '').replace(/^{/,'').replace(/}$/,'').split(carrReturnEsc).map(x => x.trim())).filter(x => x != ''))
 	const rawProperty = str.split(carrReturnEsc).join(' ').split(tabEsc).join(' ').replace(/ +(?= )/g,'').trim()
-	const { property, extend } = rawProperty.indexOf('extend') == 0 
+	const { property, extend } = rawProperty.indexOf('extend') == 0
 		? { property: rawProperty.replace('extend ', ''), extend: true }
 		: { property: rawProperty, extend: false }
 	return { property, block, extend }
@@ -118,7 +118,7 @@ const breakdownUnionBit = str => {
 	return { property: `union ${block}`, block: block, extend: false }
 }
 
-const getSchemaEntity = firstLine => 
+const getSchemaEntity = firstLine =>
 	firstLine.indexOf('type') == 0 ? { type: 'TYPE', name: firstLine.match(/type\s+(.*?)\s+.*/)[1].trim() } :
 	firstLine.indexOf('enum') == 0 ? { type: 'ENUM', name: firstLine.match(/enum\s+(.*?)\s+.*/)[1].trim() } :
 	firstLine.indexOf('input') == 0 ? { type: 'INPUT', name: firstLine.match(/input\s+(.*?)\s+.*/)[1].trim() } :
@@ -127,7 +127,7 @@ const getSchemaEntity = firstLine =>
 	firstLine.indexOf('scalar') == 0 ? { type: 'SCALAR', name: firstLine.match(/scalar\s+(.*?)\s+.*/)[1].trim() } :
 	{ type: null, name: null }
 
-const getCommentsBits = (sch) => 
+const getCommentsBits = (sch) =>
 	(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(/#(.*?)░([^#]*?)({|:)/g) || [])
 	.filter(x => x.match(/{$/))
 	.map(c => {
@@ -160,14 +160,14 @@ const genericDefaultNameAlias = genName => {
  * @param  {string} concreteType  	e.g. 'User', 'User,Product'
  * @return {string}               	e.g. 'Toy<User>', 'Toy<User,Product>'
  */
-const replaceGenericWithType = (genericType, genericLetters, concreteType) => 
+const replaceGenericWithType = (genericType, genericLetters, concreteType) =>
 	chain({ gType: genericType.replace(/\s/g, ''), gLetters: genericLetters.map(x => x.replace(/\s/g, '')), cTypes: concreteType.split(',').map(x => x.replace(/\s/g, '')) })
-	.next(({ gType, gLetters, cTypes }) => {		
+	.next(({ gType, gLetters, cTypes }) => {
 		const cTypesLength = cTypes.length
 		const genericTypeIsArray = gType.indexOf('[') == 0 && gType.indexOf(']') > 0
 		const endingChar = gType.match(/!$/) ? '!' : ''
 		if (gLetters.length != cTypesLength)
-			throw new Error(`Invalid argument exception. Mismatch between the number of types in 'genericLetters' (${genericLetters.join(',')}) and 'concreteType' (${concreteType}).`)		
+			throw new Error(`Invalid argument exception. Mismatch between the number of types in 'genericLetters' (${genericLetters.join(',')}) and 'concreteType' (${concreteType}).`)
 		// e.g. genericType = 'T', genericLetters = ['T'], concreteType = 'User' -> resp = 'User'
 		if (gLetters.length == 1 && gType.replace(/!$/, '') == gLetters[0])
 			return  `${cTypes[0]}${endingChar}`
@@ -223,18 +223,18 @@ const getAllAliases = metadata => memoizedAliases || chain((metadata || []).filt
 let memoizedGenericSchemaObjects = {}
 /**
  * Get all the type details
- * 
+ *
  * @param  {String}  t            				Type (e.g. Paged<Product>)
  * @param  {Array}   metadata     				Array of metadata objects
- * @param  {Array}   genericParentTypes 		Array of string representing the types (e.g. ['T', 'U']) of the generic parent type 
+ * @param  {Array}   genericParentTypes 		Array of string representing the types (e.g. ['T', 'U']) of the generic parent type
  *                                  	     	of that type if that type was extracted from a block. If this array is null, that
- *                                  	      	means the parent type was not a generic type. 
- * @return {String}  result.originName			't' 
+ *                                  	      	means the parent type was not a generic type.
+ * @return {String}  result.originName			't'
  * @return {Boolean} result.isGen				Indicates if 't' is a generic type
  * @return {Boolean} result.dependsOnParent		Not null if 't' is a generic. Indicates if the generic type of 't' depends
- *                                           	on its parent's type (if true, then that means the parent is itself a generic)   
+ *                                           	on its parent's type (if true, then that means the parent is itself a generic)
  * @return {Array} 	 result.metadata			'metadata'
- * @return {Array} 	 result.genericParentTypes	If the parent is a generic type, then ths array contains contain all the 
+ * @return {Array} 	 result.genericParentTypes	If the parent is a generic type, then ths array contains contain all the
  *                                             	underlying types.
  * @return {String}  result.name				If 't' is not a generic type then 't' otherwise determine what's new name.
  */
@@ -246,20 +246,57 @@ const getTypeDetails = (t, metadata, genericParentTypes) => chain((t.match(GENER
 		const directive = (t.match(/@.+/) || [])[0]
 		const endingChar = originName.match(/!$/) ? '!' : ''
 		const dependsOnParent = isGen && genericParentTypes && genericParentTypes.length > 0 && genericTypes.some(x => genericParentTypes.some(y => x == y))
-		return { 
-			originName, 
+		return {
+			originName,
 			directive,
-			isGen, 
+			isGen,
 			dependsOnParent,
 			metadata,
 			genericParentTypes,
-			name: isGen && !dependsOnParent ? `${getAliasName(originName, metadata)}${endingChar}` : originName 
+			name: isGen && !dependsOnParent ? `${getAliasName(originName, metadata)}${endingChar}` : originName
 		}
 	})
 	.next(result => {
 		if (result.isGen && !memoizedGenericSchemaObjects[result.name])
 			memoizedGenericSchemaObjects[result.name] = result
 		return result
+	})
+	.val()
+
+/**
+ * Transpile parameters if generic types are used in them
+ *
+ * @param  {String}  params            			Parameters (e.g. (filter: Filtered<Product>)
+ * @param  {Array}   metadata     				Array of metadata objects
+ * @param  {Array}   genericParentTypes 		Array of string representing the types (e.g. ['T', 'U']) of the generic parent type
+ *                                  	     	of that type if that type was extracted from a block. If this array is null, that
+ *                                  	      	means the parent type was not a generic type.
+ * @return {String}  transpiledParams			The transpiled parameters
+ */
+const getTranspiledParams = (params, genericParentTypes) => chain(params.split(','))
+	.next(genTypes => {
+		const transpiledParams = []
+		genTypes.forEach(genType => {
+			const genericTypeMatches = genType.match(GENERICTYPEREGEX)
+            const isGen = !!genericTypeMatches
+            const genericTypes = isGen ? genTypes.map(x => x.trim()) : null
+			const [ paramName, originName ] = genType.split(':').map(item => item.trim())
+            const endingChar = originName.match(/!$/) ? '!' : ''
+            const dependsOnParent = isGen && genericParentTypes && genericParentTypes.length > 0 && genericTypes.some(x => genericParentTypes.some(y => x === y))
+            const result = {
+                paramName,
+                originName,
+                isGen,
+                name: isGen && !dependsOnParent ? `${getAliasName(originName)}${endingChar}` : originName
+            }
+            if (result.isGen && !memoizedGenericSchemaObjects[result.name])
+                memoizedGenericSchemaObjects[result.name] = result
+            transpiledParams.push(`${result.paramName}: ${result.name}`)
+		})
+		return transpiledParams
+	})
+	.next(result => {
+		return result.join(', ')
 	})
 	.val()
 
@@ -279,53 +316,53 @@ const getPropertyValue = ({ name, params, result }, mapResultName) => {
 /**
  * Breaks down a string representing a block { ... } into its various parts.
  * @param  {string} blockParts 				String representing your entire block (e.g. { users: User[], posts: Paged<Post> })
- * @param  {object} baseObj 								
+ * @param  {object} baseObj
  * @param  {string} baseObj.type 			Type of the object with blockParts (e.g. TYPE, ENUM, ...)
  * @param  {string} baseObj.name 			Name of the object with blockParts
  * @param  {array} 	baseObj.genericTypes 	Array of types if the 'baseObj' is a generic type.
  * @param  {array}  metadata 				Array of object. Each object represents a metadata. Example: { name: 'node', body: '(name:hello)', schemaType: 'PROPERTY', schemaName: 'rating: PostRating!', parent: { type: 'TYPE', name: 'PostUserRating', metadata: [Object] } }
- * @return [{ 
- *         		comments: string, 
- *         		details: { 
- *         					name: string, 
+ * @return [{
+ *         		comments: string,
+ *         		details: {
+ *         					name: string,
  *         					metadata: {
- *         						name: string, 
- *         						body: string, 
- *         						schemaType: string, 
- *         						schemaName: string, 
- *         						parent: { 
- *         							type: string, 
- *         							name: string, 
- *         							metadata: [Object] 
- *         						} 
+ *         						name: string,
+ *         						body: string,
+ *         						schemaType: string,
+ *         						schemaName: string,
+ *         						parent: {
+ *         							type: string,
+ *         							name: string,
+ *         							metadata: [Object]
+ *         						}
  *         					},
- *         					params: string, 
+ *         					params: string,
  *         					result: {
  *         						originName: string,
  *         						isGen: boolean,
- *         						name: string 
- *         					} 
+ *         						name: string
+ *         					}
  *         				},
- *         		value: string  
+ *         		value: string
  *         }]             									Property breakdown
  */
-const getBlockProperties = (blockParts, baseObj, metadata) => 
+const getBlockProperties = (blockParts, baseObj, metadata) =>
 	chain(_(metadata).filter(m => m.schemaType == 'PROPERTY' && m.parent && m.parent.type == baseObj.type && m.parent.name == baseObj.name))
 	.next(meta => _(blockParts).reduce((a, part) => {
 		const p = part.trim()
-		const mData = meta.filter(m => m.schemaName == p).first() || null 
+		const mData = meta.filter(m => m.schemaName == p).first() || null
 		if (p.indexOf('#') == 0)
 			a.comments.push(p)
 		else {
 			const prop = p.replace(/ +(?= )/g,'').replace(/,$/, '')
 			const paramsMatch  = prop.replace(/@.+/, '').match(PROPERTYPARAMSREGEX)
-			const propDetails = paramsMatch 
+			const propDetails = paramsMatch
 				? chain(prop.split(paramsMatch[0]))
-					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: paramsMatch[1], result: getTypeDetails((parts[1] || '').replace(':', '').trim(), metadata, baseObj.genericTypes) })).val()
+					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: getTranspiledParams(paramsMatch[1], baseObj.genericTypes), result: getTypeDetails((parts[1] || '').replace(':', '').trim(), metadata, baseObj.genericTypes) })).val()
 				: chain(prop.split(':'))
-					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: null, result: getTypeDetails(parts.slice(1).join(':').trim(), metadata, baseObj.genericTypes) })).val()			
-			a.props.push({ 
-				comments: a.comments.join('\n    '), 
+					.next(parts => ({ name: parts[0].trim(), metadata: mData, params: null, result: getTypeDetails(parts.slice(1).join(':').trim(), metadata, baseObj.genericTypes) })).val()
+			a.props.push({
+				comments: a.comments.join('\n    '),
 				details: propDetails,
 				value: getPropertyValue(propDetails)
 			})
@@ -341,8 +378,8 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
  * @param  {String} typeName    e.g. 'type' or 'input'
  * @param  {RegExp} nameRegEx   Regex that can extract the specific details of the schema bit (i.e. definitions)
  * @param  {Array} 	metadata    metadata coming from the 'extractGraphMetadata' method.
- * @return {Array}             	Array of objects: Example: 
- *                              [{ 
+ * @return {Array}             	Array of objects: Example:
+ *                              [{
  *                              	type: 'TYPE',
  *                              	extend: false,
  *                              	name: 'Foo',
@@ -351,7 +388,7 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
  *                              	blockProps: [ { comments: '', details: [Object], value: 'id: String!' } ],
  *                              	inherits: null,
  *                              	implements: null },
- *                              { 
+ *                              {
  *                              	type: 'TYPE',
  *                              	extend: true,
  *                              	name: 'Query',
@@ -359,33 +396,33 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
  *                              	genericType: null,
  *                              	blockProps: [ { comments: '', details: [Object], value: 'foos: [Foo]!' } ],
  *                              	inherits: null,
- *                              	implements: null 
+ *                              	implements: null
  *                              }]
  */
-const getSchemaObject = (definitions, typeName, nameRegEx, metadata) => 
+const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 	_.toArray(_(definitions).filter(d => d.property.indexOf(typeName) == 0)
 	.map(d => {
-		if (typeName == 'scalar') 
+		if (typeName == 'scalar')
 			return {
-				type: 'SCALAR', 
+				type: 'SCALAR',
 				extend: false,
-				name: d.block, 
-				metadata: null, 
-				genericType: false, 
-				blockProps: [], 
-				inherits: null, 
-				implements: null  
+				name: d.block,
+				metadata: null,
+				genericType: false,
+				blockProps: [],
+				inherits: null,
+				implements: null
 			}
-		else if (typeName == 'union') 
+		else if (typeName == 'union')
 			return {
-				type: 'UNION', 
+				type: 'UNION',
 				extend: false,
-				name: d.block, 
-				metadata: null, 
-				genericType: false, 
-				blockProps: [], 
-				inherits: null, 
-				implements: null  
+				name: d.block,
+				metadata: null,
+				genericType: false,
+				blockProps: [],
+				inherits: null,
+				implements: null
 			}
 		else {
 			const typeDefMatch = d.property.match(/(.*?){/)
@@ -401,35 +438,35 @@ const getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 			const implementsMatch = typeDef.match(IMPLEMENTSREGEX)
 			const directive = (typeDef.match(/@[a-zA-Z0-9_]+(.*?)$/) || [''])[0].trim().replace(/{$/, '').trim() || null
 
-			const _interface = implementsMatch 
-				? implementsMatch[0].replace('implements ', '').replace('{', '').split(',').map(x => x.trim().split(' ')[0]) 
+			const _interface = implementsMatch
+				? implementsMatch[0].replace('implements ', '').replace('{', '').split(',').map(x => x.trim().split(' ')[0])
 				: null
 
 			const objectType = typeName.toUpperCase()
 			const metadat = metadata
 				? _(metadata).filter(m => m.schemaType == objectType && m.schemaName == name).first() || null
-				: null 
+				: null
 
 			const genericTypes = isGenericType ? isGenericType.split(',').map(x => x.trim()) : null
 			const baseObj = { type: objectType, name: name, genericTypes: genericTypes }
 
-			const result = { 
-				type: objectType, 
+			const result = {
+				type: objectType,
 				extend: d.extend,
-				name: name, 
+				name: name,
 				metadata: metadat,
-				directive: directive, 
-				genericType: isGenericType, 
-				blockProps: getBlockProperties(d.block, baseObj, metadata), 
-				inherits: superClass, 
-				implements: _interface  
+				directive: directive,
+				genericType: isGenericType,
+				blockProps: getBlockProperties(d.block, baseObj, metadata),
+				inherits: superClass,
+				implements: _interface
 			}
 			return result
 		}
 	}))
 
 const getGenericAlias = s => !s ? genericDefaultNameAlias :
-genName => chain(genName.match(GENERICTYPEREGEX)).next(m => m 
+genName => chain(genName.match(GENERICTYPEREGEX)).next(m => m
 	? chain(m[1].split(',').map(x => `"${x.trim()}"`).join(',')).next(genericTypeName => eval(s + '(' + genericTypeName + ')')).val()
 	: genName).val()
 
@@ -467,9 +504,9 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 		missingClasses.forEach(function(c){
 			throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot find inherited ' + obj.type.toLowerCase() + ' ' + c)
 		})
-		
+
 		const superClassesWithInheritance = superClass.map(function(subClass){
-			if (obj.type != subClass.type) throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot inherit from ' + subClass.type + ' ' + subClass.name + '. A ' + obj.type.toLowerCase() + ' can only inherit from another ' + obj.type.toLowerCase())                  
+			if (obj.type != subClass.type) throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot inherit from ' + subClass.type + ' ' + subClass.name + '. A ' + obj.type.toLowerCase() + ' can only inherit from another ' + obj.type.toLowerCase())
 			return getObjWithExtensions(subClass, schemaObjects)
 		})
 
@@ -484,10 +521,10 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 				return x
 			}))),
 			inherits: superClassesWithInheritance,
-			blockProps: (superClassesWithInheritance instanceof Array ? 
+			blockProps: (superClassesWithInheritance instanceof Array ?
 				_.toArray(_.flatten(_.concat(_.flatten(superClassesWithInheritance.map(function(subClass){
 				return subClass.blockProps
-			})), obj.blockProps))): 
+			})), obj.blockProps))):
 				_.toArray(_.flatten(_.concat(superClassesWithInheritance.blockProps, obj.blockProps)))
 			)
 		}
@@ -502,11 +539,11 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 const getObjWithInterfaces = (obj, schemaObjects) => {
 	if (obj && schemaObjects && obj.implements && obj.implements.length > 0) {
 		const interfaceWithAncestors = _.toArray(_.uniq(_.flatten(_.concat(obj.implements.map(i => getInterfaceWithAncestors(i, schemaObjects))))))
-		return { 
-			type: obj.type, 
-			name: obj.name, 
-			genericType: obj.genericType, 
-			originalBlockProps: obj.blockProps, 
+		return {
+			type: obj.type,
+			name: obj.name,
+			genericType: obj.genericType,
+			originalBlockProps: obj.blockProps,
 			metadata: obj.metadata,
 			implements: interfaceWithAncestors,
 			inherits: obj.inherits,
@@ -526,8 +563,8 @@ const getInterfaceWithAncestors = (_interface, schemaObjects) => {
 
 	const interfaceWithAncestors = interfaceObj.implements && interfaceObj.implements.length > 0
 		? _.toArray(_.uniq(_.flatten(_.concat(
-			[_interface], 
-			interfaceObj.implements, 
+			[_interface],
+			interfaceObj.implements,
 			interfaceObj.implements.map(i => getInterfaceWithAncestors(i, schemaObjects))))))
 		: [_interface]
 
@@ -540,9 +577,9 @@ const addComments = (obj, comments) => {
 	return obj
 }
 
-const parseSchemaObjToString = (comments, type, name, _implements, blockProps, extend=false, directive) => 
+const parseSchemaObjToString = (comments, type, name, _implements, blockProps, extend=false, directive) =>
 	[
-		`${comments && comments != '' ? `\n${comments}` : ''}`, 
+		`${comments && comments != '' ? `\n${comments}` : ''}`,
 		`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name.replace('!', '')}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} ${blockProps.some(x => x) ? `${directive ? ` ${directive} ` : ''}{`: ''} `,
 		blockProps.map(prop => `    ${prop.comments != '' ? `${prop.comments}\n    ` : ''}${prop.value}`).join('\n'),
 		blockProps.some(x => x) ? '}': ''
@@ -550,7 +587,7 @@ const parseSchemaObjToString = (comments, type, name, _implements, blockProps, e
 
 /**
  * Tests if the type is a generic type based on the value of genericLetter
- * 
+ *
  * @param  {String} type          e.g. 'Paged<T>', '[T]', 'T', 'T!'
  * @param  {String} genericLetter e.g. 'T', 'T,U'
  * @return {Boolean}              e.g. if type equals 'Paged<T>' or '[T]' and genericLetter equals 'T' then true.
@@ -587,14 +624,14 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 		const blockProps = baseGenObj.blockProps.map(prop => {
 			let p = prop
 			if (isTypeGeneric(prop.details.result.name, baseGenObj.genericType)) {
-				let details = { 
-					name: prop.details.name, 
-					params: prop.params, 
+				let details = {
+					name: prop.details.name,
+					params: prop.params,
 					result: {
 						originName: prop.details.originName,
 						isGen: prop.details.isGen,
 						name: replaceGenericWithType(prop.details.result.name, baseGenObj.genericType.split(','), concreteType)
-					} 
+					}
 				}
 				if (prop.details.result.dependsOnParent) {
 					const propTypeIsRequired = prop.details.result.name.match(/!$/)
@@ -621,8 +658,8 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 					}
 				}
 
-				p = { 
-					comments: prop.comments, 
+				p = {
+					comments: prop.comments,
 					details: details,
 					value: getPropertyValue(details)
 				}
@@ -630,16 +667,16 @@ const createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBre
 
 			return p
 		})
-	
+
 		const newSchemaObjStr = parseSchemaObjToString(baseGenObj.comments, baseGenObj.type, name, baseGenObj.implements, blockProps)
-		const result = { 
-			obj: { 
-				comments: baseGenObj.comments, 
-				type: baseGenObj.type, 
-				name, 
-				implements: baseGenObj.implements, 
-				blockProps: blockProps, 
-				genericType: null 
+		const result = {
+			obj: {
+				comments: baseGenObj.comments,
+				type: baseGenObj.type,
+				name,
+				implements: baseGenObj.implements,
+				blockProps: blockProps,
+				genericType: null
 			},
 			stringObj: newSchemaObjStr
 		}
@@ -654,12 +691,12 @@ const buildSchemaString = (schemaObjs=[]) => {
 		.filter(x => !x.genericType && x.type != 'ABSTRACT' && x.type != 'DIRECTIVE')
 		.map(obj => parseSchemaObjToString(obj.comments, obj.type, obj.name, obj.implements, obj.blockProps, obj.extend, obj.directive))
 		.join('\n')
-	
+
 	const resolvedGenericTypes = {}
 	_(memoizedGenericSchemaObjects)
 		.filter(x => !x.dependsOnParent)
 		.forEach(value => createNewSchemaObjectFromGeneric(value, schemaObjs, resolvedGenericTypes).stringObj)
-	
+
 	const part_02 = _(resolvedGenericTypes).map(x => x.stringObj).join('\n')
 	const directives = schemaObjs.filter(x => x.type == 'DIRECTIVE' && x.raw).map(x => x.raw).join('')
 
@@ -669,9 +706,9 @@ const buildSchemaString = (schemaObjs=[]) => {
 
 /**
  * Breaks down a schema into its bits and pieces.
- * @param  {String}  graphQlSchema      
- * @param  {Array}   metadata           
- * @param  {Boolean} includeNewGenTypes 
+ * @param  {String}  graphQlSchema
+ * @param  {Array}   metadata
+ * @param  {Boolean} includeNewGenTypes
  * @return {String}  result.type 		e.g. 'TYPE', 'INTERFACE'
  * @return {Boolean} result.raw
  * @return {Boolean} result.extend
@@ -697,14 +734,14 @@ const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(ge
 				.forEach(value => createNewSchemaObjectFromGeneric(value, v, resolvedGenericTypes))
 
 			return v.concat(_.toArray(_(resolvedGenericTypes).map(x => x.obj)))
-		} else 
+		} else
 			return v
 	})
 	// Include directives
 	.next(v => {
 		const directives = (metadata || []).filter(m => m.directive)
 		if (directives.length > 0) {
-			return v.concat(directives.map(d => ({ 
+			return v.concat(directives.map(d => ({
 				type: 'DIRECTIVE',
 				name: d.name,
 				raw: (d.body || '').replace(/░/g, '\n'),
@@ -714,7 +751,7 @@ const getSchemaParts = (graphQlSchema, metadata, includeNewGenTypes) => chain(ge
 				blockProps: [],
 				inherits: null,
 				implements: null,
-				comments: undefined 
+				comments: undefined
 			})))
 		} else
 			return v
