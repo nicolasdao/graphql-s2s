@@ -757,10 +757,7 @@ var runtest = function(s2s, assert) {
       it('14 - DIRECTIVES: Should support directive after generic type.', () => {
         var schema = `
         directive @isAuthenticated on QUERY | FIELD
-        directive @deprecated
-        (
-          reason: String = "No longer on supported"
-        ) on FIELD_DEFINITION | ENUM_VALUE
+        directive @deprecated(reason: String = "No longer on supported") on FIELD_DEFINITION | ENUM_VALUE
 
         type ExampleType {
           newField: String 

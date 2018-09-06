@@ -30,7 +30,7 @@ const removeDirectives = (schema = '') => {
 	const directives = []
 	const d = schema.match(/directive\s(.*?)@(.*?)(\((.*?)\)\son\s(.*?)░|\son\s(.*?)░)/mg) || []
 	d.forEach(directive => {
-		const directiveName = directive.match(/@(.*?)\s/)[0].replace(/(░)\s/g,'').trim()
+		const directiveName = directive.match(/@(.*?)[\s\(]/)[0].replace(/(░)\s/g,'').trim().replace('(','')
 		schema = schema.replace(directive, '')
 		if (!schema.match(/░$/))
 			schema += '░'
