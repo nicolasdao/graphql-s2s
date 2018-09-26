@@ -506,7 +506,10 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 		})
 
 		const superClassesWithInheritance = superClass.map(function(subClass){
-			if (obj.type != subClass.type) throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot inherit from ' + subClass.type + ' ' + subClass.name + '. A ' + obj.type.toLowerCase() + ' can only inherit from another ' + obj.type.toLowerCase())
+
+			if (!inheritingIsAllowed(obj, subClass)){
+				throw new Error('Schema error: ' + obj.type.toLowerCase() + ' ' + obj.name + ' cannot inherit from ' + subClass.type + ' ' + subClass.name + '.')  
+			}            
 			return getObjWithExtensions(subClass, schemaObjects)
 		})
 
@@ -534,6 +537,14 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 	}
 	else
 		return getObjWithInterfaces(obj)
+}
+
+const inheritingIsAllowed = (obj, subClass) => {
+	if (obj.type === 'TYPE'){
+		return subClass.type === 'TYPE' || subClass.type === 'INTERFACE'
+	}else {
+		return obj.type === subClass.type
+	}
 }
 
 const getObjWithInterfaces = (obj, schemaObjects) => {

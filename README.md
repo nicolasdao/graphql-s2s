@@ -186,7 +186,7 @@ For a concrete example, refer to the [code below](#deconstructing-transforming-r
 _WARNING: the following examples will be based on '[graphql-tools](https://github.com/apollographql/graphql-tools)' from the Apollo team, but the string schema could also be used with the 'buildSchema' method from graphql.js_
 
 ### Type Inheritance
-_NOTE: The examples below only use 'type', but it would also work on 'input'_
+_NOTE: The examples below only use 'type', but it would also work on 'input' and 'interface'_
 
 __*Before graphql-s2s*__
 ```js

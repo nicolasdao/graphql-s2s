@@ -994,18 +994,67 @@ var runtest = function(s2s, assert) {
           'Schema error: type PostUserRating cannot find inherited type Author'
         )
       })
-      it('21 - INHERITANCE: Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'".', () => {
+      it('21 - INHERITANCE: Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'" or "type=\'INTERFACE\'".', () => {
         assert.throws(() =>
           transpileSchema(`
-          interface Name {  
+          input Name {  
             name: String! 
           }
           type PostUserRating inherits Name {
             rating: String!
           }`),
-          'Schema error: type PostUserRating cannot inherit from INTERFACE Name. A type can only inherit from another type'
+          'Schema error: type PostUserRating cannot inherit from INPUT Name.'
         )
       })
+      it('22 - INHERITANCE: Should support inheriting from an INTERFACE.', () => {
+        var schema = `
+          interface Name {  
+            name: String! 
+          }
+          type PostUserRating inherits Name {
+            rating: String!
+          }`
+
+        var schema_output = `
+          interface Name {  
+            name: String! 
+          }
+          type PostUserRating {
+            name: String!
+            rating: String!
+          }`
+
+
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
+      it('23 - INHERITANCE: Should support inheriting from an INTERFACE and implementing it.', () => {
+        var schema = `
+          interface Name {  
+            name: String! 
+          }
+          type PostUserRating inherits Name implements Name {
+            rating: String!
+          }`
+
+        var schema_output = `
+          interface Name {  
+            name: String! 
+          }
+          type PostUserRating implements Name{
+            name: String!
+            rating: String!
+          }`
+
+
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
+      
     }))
 
   describe('graphqls2s', () =>
