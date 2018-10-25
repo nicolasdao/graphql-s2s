@@ -524,7 +524,37 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('10 - METADATA: Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
+      it('10 - GENERIC TYPES: Should support non-nullable typed array (issue #23).', () => {
+
+        var schema = `
+        type Paged<T> {
+          data: [T!]!
+          cursor: ID
+        }
+
+        type Student {
+          name: String
+          questions: Paged<Question>
+        }
+        `
+
+        var schema_output = `
+        type Student {
+            name: String
+            questions: PagedQuestion
+        }
+        type PagedQuestion {
+            data: [Question]!
+            cursor: ID
+        }
+        `
+
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
+      it('11 - METADATA: Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
         var output = transpileSchema(`
         @node
         type Brand {
@@ -553,7 +583,7 @@ var runtest = function(s2s, assert) {
         `)
         assert.equal(answer,correct)
       })
-      it('11 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
+      it('12 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
         var schema = `
         # ### Page - Pagination Metadata
         # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
@@ -647,7 +677,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('12 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks from inherited types (bug #15).', () => {
+      it('13 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks from inherited types (bug #15).', () => {
         var schema = `
         # The most generic type of item. See also: schema.org/Thing
         type Thing {
@@ -691,7 +721,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('13 - DIRECTIVES: Should support directives.', () => {
+      it('14 - DIRECTIVES: Should support directives.', () => {
 
         var schema = `
         directive @isAuthenticated on QUERY | FIELD
@@ -754,7 +784,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('14 - DIRECTIVES: Should support directive after generic type.', () => {
+      it('15 - DIRECTIVES: Should support directive after generic type.', () => {
         var schema = `
         directive @isAuthenticated on QUERY | FIELD
         directive @deprecated(reason: String = "No longer on supported") on FIELD_DEFINITION | ENUM_VALUE
@@ -827,7 +857,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('15 - DIRECTIVES: Should supports rogue native directives, i.e., native directive without explicit definitions (fix #14).', () => {
+      it('16 - DIRECTIVES: Should supports rogue native directives, i.e., native directive without explicit definitions (fix #14).', () => {
         var schema = `
         # Mutation
         type Mutation {
@@ -868,9 +898,72 @@ var runtest = function(s2s, assert) {
         var output = transpileSchema(schema)
         var answer = compressString(output)
         var correct = compressString(schema_output)
-        assert.equal(answer,correct)
+        assert.equal(answer,correct, '01')
+
+        // var schema_02 = `
+        // enum OperationType {
+        //   INVEST
+        //   WITHDRAW
+        // }
+        // type Transaction {
+        //   id: ID! @unique
+        //   user: User!
+        //   date: DateTime!
+        //   operationType: OperationType!
+        //   amount: Float!
+        //   tx: String
+        //   notes: String
+        // }
+
+        // enum Role {
+        //   ADMIN
+        //   USER
+        // }
+
+        // type User {
+        //   id: ID! @unique
+        //   email: String! @unique
+        //   name: String!
+        //   roles: [Role!]!
+        //   referrer: User @relation(name: "UserReferrerRelation")
+        //   referrals: [User!]! @relation(name: "UserReferralsRelation")
+        //   password: String!
+        //   rate: Float!
+        // }`
+
+        // var  schema_output_02 = `
+        // type Transaction {
+        //     id: ID! @unique
+        //     user: User!
+        //     date: DateTime!
+        //     operationType: OperationType!
+        //     amount: Float!
+        //     tx: String
+        //     notes: String
+        // }
+        // type User {
+        //     id: ID! @unique
+        //     email: String! name: String!
+        //     roles: [Role!]!
+        //     referrer: User @relation(name: "UserReferrerRelation")
+        //     referrals: [User!]! @relation(name: "UserReferralsRelation")
+        //     password: String!
+        //     rate: Float!
+        // }
+        // enum OperationType {
+        //     INVEST
+        //     WITHDRAW
+        // }
+        // enum Role {
+        //     ADMIN
+        //     USER
+        // }`
+        // var output_02 = transpileSchema(schema_02)
+        // var answer_02 = compressString(output_02)
+        // var correct_02 = compressString(schema_output_02)
+        // assert.equal(answer_02,correct_02, '02')
       })
-      it('16 - INHERITANCE: Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
+      it('17 - INHERITANCE: Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
         var output = transpileSchema(`
         type Person {
           firstname: String
@@ -897,7 +990,7 @@ var runtest = function(s2s, assert) {
         `)
         assert.equal(answer,correct)
       })
-      it('17 - INHERITANCE: Should add properties from the super type to the sub type.', () => {
+      it('18 - INHERITANCE: Should add properties from the super type to the sub type.', () => {
         var output = transpileSchema(`
         type Post {
           id: ID! 
@@ -922,7 +1015,7 @@ var runtest = function(s2s, assert) {
         `)
         assert.equal(answer,correct)
       })
-      it('18 - INHERITANCE: Should support multiple inheritance type.', () => {
+      it('19 - INHERITANCE: Should support multiple inheritance type.', () => {
         var output = transpileSchema(`
         type Name {  
           name: String! 
@@ -948,7 +1041,7 @@ var runtest = function(s2s, assert) {
         }`)
         assert.equal(answer,correct)
       })
-      it('19 - INHERITANCE: Should support multiple inheritance type with implements interface.', () => {
+      it('20 - INHERITANCE: Should support multiple inheritance type with implements interface.', () => {
         var output = transpileSchema(`
         interface Node  {  
           id: Int! 
@@ -982,7 +1075,7 @@ var runtest = function(s2s, assert) {
         }`)
         assert.equal(answer,correct)
       })
-      it('20 - INHERITANCE: Should throw an error if inherited type is missing.', () => {
+      it('21 - INHERITANCE: Should throw an error if inherited type is missing.', () => {
         assert.throws(() =>
           transpileSchema(`
           type Name {  
@@ -994,7 +1087,7 @@ var runtest = function(s2s, assert) {
           'Schema error: type PostUserRating cannot find inherited type Author'
         )
       })
-      it('21 - INHERITANCE: Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'" or "type=\'INTERFACE\'".', () => {
+      it('22 - INHERITANCE: Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'" or "type=\'INTERFACE\'".', () => {
         assert.throws(() =>
           transpileSchema(`
           input Name {  
@@ -1006,7 +1099,7 @@ var runtest = function(s2s, assert) {
           'Schema error: type PostUserRating cannot inherit from INPUT Name.'
         )
       })
-      it('22 - INHERITANCE: Should support inheriting from an INTERFACE.', () => {
+      it('23 - INHERITANCE: Should support inheriting from an INTERFACE.', () => {
         var schema = `
           interface Name {  
             name: String! 
@@ -1030,7 +1123,7 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      it('23 - INHERITANCE: Should support inheriting from an INTERFACE and implementing it.', () => {
+      it('24 - INHERITANCE: Should support inheriting from an INTERFACE and implementing it.', () => {
         var schema = `
           interface Name {  
             name: String! 
@@ -1054,7 +1147,6 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
-      
     }))
 
   describe('graphqls2s', () =>
@@ -1290,6 +1382,41 @@ var runtest = function(s2s, assert) {
         assert.isOk(typeMeta3Prop2.details.metadata)
         assert.equal(!typeMeta3Prop2.details.metadata.body, true)
         assert.equal(typeMeta3Prop2.details.metadata.name, 'boris')
+      })
+      it('04 - REQUIRED PARAMS: Should deal with required params', () => {
+        var schema = `
+          type Page<T> {
+            cursor: ID
+            data: [T]
+          }
+
+          type Location {
+            lat: Float!
+            long: Float!
+          }
+
+          type Event {
+            location: Location!
+          }
+
+          type Query {
+            events: Page<Event>
+          }`
+
+          var query = `{
+            events{
+              data{
+                location {
+                  lat
+                  long
+                }
+              }
+            }
+          }`
+
+          var schemaAST = getSchemaAST(schema)
+          var queryAST = getQueryAST(query, null, schemaAST)
+          assert.isOk(queryAST, '01')
       })
     }))
 

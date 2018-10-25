@@ -104,7 +104,7 @@ const addMetadataToProperty = (queryProp, parentTypeAST, schemaAST) =>
                 args: queryProp.args,
                 properties: queryProp.properties && queryProp.properties.length > 0
                     ?   chain(schemaProp.details.result.name)
-                        .next(typename => (typename.match(/^\[(.*?)\]$/) || [null, typename])[1])
+                        .next(typename => ((typename.match(/^\[(.*?)\]$/) || [null, typename])[1]).replace(/!$/, ''))
                         .next(typename => schemaAST.find(x => x.type == 'TYPE' && x.name == typename))
                         .next(parentTypeAST => parentTypeAST 
                             ? queryProp.properties.map(queryProp => addMetadataToProperty(queryProp, parentTypeAST, schemaAST))

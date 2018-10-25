@@ -6,10 +6,11 @@
   "scripts": {
     "test": "mocha ./test/node/*.js",
     "test:dev": "MOCHA_ENV=dev mocha ./test/node/*.js",
-    "release": "standard-version",
-    "eslint": "eslint graphqls2s.js src/ test/ --fix",
+    "rls": "standard-version --release-as",
+    "lint": "eslint graphqls2s.js src/ test/ --fix",
     "build": "WEBPACK_ENV=build webpack",
-    "dev": "WEBPACK_ENV=dev webpack"
+    "dev": "WEBPACK_ENV=dev webpack",
+    "v": "node -e \"console.log(require('./package.json').version)\""
   },
   "repository": {
     "type": "git",
