@@ -544,7 +544,7 @@ var runtest = function(s2s, assert) {
             questions: PagedQuestion
         }
         type PagedQuestion {
-            data: [Question]!
+            data: [Question!]!
             cursor: ID
         }
         `
@@ -900,68 +900,70 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct, '01')
 
-        // var schema_02 = `
-        // enum OperationType {
-        //   INVEST
-        //   WITHDRAW
-        // }
-        // type Transaction {
-        //   id: ID! @unique
-        //   user: User!
-        //   date: DateTime!
-        //   operationType: OperationType!
-        //   amount: Float!
-        //   tx: String
-        //   notes: String
-        // }
+        var schema_02 = `
+        enum OperationType {
+          INVEST
+          WITHDRAW
+        }
+        type Transaction {
+          id: ID! @unique
+          user: User!
+          date: DateTime!
+          operationType: OperationType!
+          amount: Float!
+          tx: String
+          notes: String
+        }
 
-        // enum Role {
-        //   ADMIN
-        //   USER
-        // }
+        enum Role {
+          ADMIN
+          USER
+        }
 
-        // type User {
-        //   id: ID! @unique
-        //   email: String! @unique
-        //   name: String!
-        //   roles: [Role!]!
-        //   referrer: User @relation(name: "UserReferrerRelation")
-        //   referrals: [User!]! @relation(name: "UserReferralsRelation")
-        //   password: String!
-        //   rate: Float!
-        // }`
+        type User {
+          id: ID! @unique
+          email: String! @unique
+          name: String!
+          roles: [Role!]!
+          referrer: User @relation(name: "UserReferrerRelation")
+          referrals: [User!]! @relation(name: "UserReferralsRelation")
+          password: String!
+          rate: Float!
+        }`
 
-        // var  schema_output_02 = `
-        // type Transaction {
-        //     id: ID! @unique
-        //     user: User!
-        //     date: DateTime!
-        //     operationType: OperationType!
-        //     amount: Float!
-        //     tx: String
-        //     notes: String
-        // }
-        // type User {
-        //     id: ID! @unique
-        //     email: String! name: String!
-        //     roles: [Role!]!
-        //     referrer: User @relation(name: "UserReferrerRelation")
-        //     referrals: [User!]! @relation(name: "UserReferralsRelation")
-        //     password: String!
-        //     rate: Float!
-        // }
-        // enum OperationType {
-        //     INVEST
-        //     WITHDRAW
-        // }
-        // enum Role {
-        //     ADMIN
-        //     USER
-        // }`
-        // var output_02 = transpileSchema(schema_02)
-        // var answer_02 = compressString(output_02)
-        // var correct_02 = compressString(schema_output_02)
-        // assert.equal(answer_02,correct_02, '02')
+        var  schema_output_02 = `
+        type Transaction {
+            id: ID! @unique
+            user: User! 
+            date: DateTime!
+            operationType: OperationType!
+            amount: Float!
+            tx: String
+            notes: String
+        }
+        type User {
+            id: ID! @unique
+            email: String! @unique
+            name: String!
+            roles: [Role!]!
+            referrer: User @relation(name: "UserReferrerRelation")
+            referrals: [User!]! @relation(name: "UserReferralsRelation")
+            password: String!
+            rate: Float!
+        }
+        enum OperationType {
+            INVEST
+            WITHDRAW
+        }
+        enum Role {
+            ADMIN
+            USER
+        }`
+
+        var output_02 = transpileSchema(schema_02)
+        var answer_02 = compressString(output_02)
+        var correct_02 = compressString(schema_output_02)
+        assert.equal(answer_02,correct_02, '02')
       })
       it('17 - INHERITANCE: Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
         var output = transpileSchema(`

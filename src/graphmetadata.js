@@ -51,8 +51,8 @@ const removeDirectives = (schema = '') => {
 	// and have not been escaped before because they do not have an explicit definition in the current schema (scenario
 	// of AWS AppSync where the @aws_subscribe is defined outside of the developer reach)
 	// 
-	// IMPORTANT: The code below mutates the 'schema' variable
-	const rogueDirectives = (schema.match(/░\s*[a-zA-Z0-9_]+([^░]*?)@(.*?)░/g) || [])
+	// IMPORTANT: The code below mutates the 'schema' variable 	
+	const rogueDirectives = (schema.replace(/░/g,'░░').match(/░\s*[a-zA-Z0-9_]+([^░]*?)@(.*?)░/g) || [])
 	.map(m => m.replace(/^(.*?)@/, '@').replace(/\s*░$/, ''))
 	.reduce((acc,m) => {
 		m = m.trim().replace(/{$/, '')

@@ -192,10 +192,11 @@ const replaceGenericWithType = (genericType, genericLetters, concreteType) =>
 		} else { // e.g. genericType = 'T' or '[T]'
 			const type = genericTypeIsArray ? gType.match(/\[(.*?)\]/)[1] : gType
 			const matchingConcreteTypes = type.split(',').map(t => {
-				const tt = t.replace(/!$/, '').trim()
+				const isRequired = /!$/.test(t)
+				t = (isRequired ? t.replace(/!$/, '') : t).trim()
 				for(let i=0;i<cTypesLength;i++) {
-					if (gLetters[i] == tt)
-						return cTypes[i]
+					if (gLetters[i] == t)
+						return `${cTypes[i]}${isRequired ? '!' : ''}`
 				}
 				throw new Error(`Invalid argument exception. Mismatch types between the 'genericType' (${genericType}) and the allowed types 'genericLetters' (${genericLetters.join(',')}).`)
 			})
