@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.18.0"></a>
+# [0.18.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.17.4...v0.18.0) (2018-10-27)
+
+
+### Features
+
+* Add support for detecting properties in GraphQl queries ([f9ac884](https://github.com/nicolasdao/graphql-s2s/commit/f9ac884))
+
+
+
 <a name="0.17.4"></a>
 ## [0.17.4](https://github.com/nicolasdao/graphql-s2s/compare/v0.17.3...v0.17.4) (2018-10-25)
 
