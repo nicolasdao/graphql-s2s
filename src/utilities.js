@@ -223,7 +223,21 @@ const getQueryAST = (query, operationName, schemaAST, options={}) => {
         Object.assign(output, { 
             filter: fn => filterQueryAST(output, fn), 
             some: fn => detectQueryAST(output, fn),
-            propertyPaths: fn => getQueryASTPropertyPaths(output, fn)
+            propertyPaths: fn => getQueryASTPropertyPaths(output, fn),
+            containsProp: propPath => {
+                if (!propPath)
+                    return false
+                const props = propPath.split('.')
+                const leafProp = props.slice(-1)[0]
+                const candidates = getQueryASTPropertyPaths(output, ast => ast && ast.name && ast.name.split(':').slice(-1)[0] == leafProp) || []
+                if (candidates.length == 0)
+                    return false
+
+                return candidates.some(({ property }) => {
+                    const propWithNoAliases = property.split('.').map(part => part.split(':').slice(-1)[0]).join('.')
+                    return propWithNoAliases.indexOf(propPath) >= 0
+                })
+            }
         })
         return output
     }

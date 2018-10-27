@@ -640,11 +640,48 @@ __*QueryAST.propertyPaths((ast:QueryAST) => ...): [String]*__
 
 Returns an array of strings. Each one represents the path to the query property that matches the predicate `ast => ...`.
 
+__*QueryAST.containsProp(property:String): Boolean*__
+
+Returns a boolean indicating the presence of a property in the GraphQl query. Example:
+
+```js
+const schema = `
+type User {
+  id: ID!
+  name: String
+  details: UserDetails
+}
+
+type UserDetails {
+  gender: String 
+}
+
+type Query {
+  users: [User]
+}
+`
+const query = `
+{
+  users {
+    id
+    details {
+      gender
+    }
+  }
+}`
+const schemaAST = getSchemaAST(schema)
+const queryAST = getQueryAST(query, null, schemaAST)
+queryAST.containsProp('users.id') // true
+queryAST.containsProp('users.details.gender') // true
+queryAST.containsProp('details.gender') // true
+queryAST.containsProp('users.name') // false
+```
+
 __*QueryAST.some((ast:QueryAST) => ...): Boolean*__
 
 Returns a boolean indicating whether the QueryAST contains at least one AST matching the predicate `ast => ...`.
 
-__*buildQuery(QueryAST): String*__
+__*buildQuery(ast:QueryAST): String*__
 
 Rebuilds a valid GraphQl query from a QueryAST object.
 

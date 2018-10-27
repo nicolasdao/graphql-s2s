@@ -1662,6 +1662,68 @@ var runtest = function(s2s, assert) {
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
       })
+
+      it('05 - DETECT PROPS IN QUERY: Should return a boolean indicating whether a property is present in the query or not.', () => {
+        var schema = `
+        type User {
+          id: ID!
+          username: String!
+          details: UserDetails
+        }
+
+        type Address {
+          street: String
+        }
+
+        type UserDetails {
+          gender: String 
+          bankDetails: BankDetail
+        }
+
+        type BankDetail {
+          name: String 
+          @auth
+          account: String!
+        }
+
+        type Query {
+          users: [User]
+          @auth
+          addresses: [Address]
+        }
+        `
+        var query = `
+        query Hello($person: String, $animal: String) {
+          hello:users(where:{name:$person, kind: $animal}){
+            id
+            username
+            details {
+              gender 
+              bankDetails{
+                account
+              }
+            }
+          }
+          users{
+            id
+          }
+          addresses {
+            street
+          }
+        }`
+        var schemaAST = getSchemaAST(schema)
+        var queryAST = getQueryAST(query, null, schemaAST)
+        assert.isOk(queryAST.containsProp('users.id'), '01')
+        assert.isOk(queryAST.containsProp('users.details'), '02')
+        assert.isOk(queryAST.containsProp('users.details.gender'), '03')
+        assert.isOk(queryAST.containsProp('users.details.bankDetails'), '04')
+        assert.isOk(queryAST.containsProp('users.details.bankDetails.account'), '05')
+        assert.isOk(queryAST.containsProp('bankDetails'), '06')
+        assert.isOk(queryAST.containsProp('bankDetails.account'), '07')
+        assert.isOk(queryAST.containsProp('addresses.street'), '08')
+        assert.isNotOk(queryAST.containsProp('users.name'), '09')
+        assert.isNotOk(queryAST.containsProp('bankDetails.account.id'), '10')
+      })
     }))
 
   describe('graphqls2s', () =>
