@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.18.1"></a>
+## [0.18.1](https://github.com/nicolasdao/graphql-s2s/compare/v0.18.0...v0.18.1) (2018-11-02)
+
+
+### Features
+
+* Add support for RegExp in function 'queryAST.containsProp' ([6337909](https://github.com/nicolasdao/graphql-s2s/commit/6337909))
+
+
+
 <a name="0.18.0"></a>
 # [0.18.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.17.4...v0.18.0) (2018-10-27)
 
