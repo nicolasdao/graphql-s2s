@@ -227,15 +227,11 @@ const getQueryAST = (query, operationName, schemaAST, options={}) => {
             containsProp: propPath => {
                 if (!propPath)
                     return false
-                const props = propPath.split('.')
-                const leafProp = props.slice(-1)[0]
-                const candidates = getQueryASTPropertyPaths(output, ast => ast && ast.name && ast.name.split(':').slice(-1)[0] == leafProp) || []
-                if (candidates.length == 0)
-                    return false
-
-                return candidates.some(({ property }) => {
-                    const propWithNoAliases = property.split('.').map(part => part.split(':').slice(-1)[0]).join('.')
-                    return propWithNoAliases.indexOf(propPath) >= 0
+                
+                const matchFn = propPath instanceof RegExp ? (p => p.match(propPath)) : (p => p.indexOf(propPath) >= 0)
+                return (getQueryASTPropertyPaths(output, ast => ast && ast.name) || []).some(({ property }) => {
+                    const propWithNoAliases = (property || '').split('.').map(part => part.split(':').slice(-1)[0]).join('.')
+                    return matchFn(propWithNoAliases)
                 })
             }
         })
