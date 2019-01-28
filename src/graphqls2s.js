@@ -282,7 +282,7 @@ const getTranspiledParams = (params, genericParentTypes) => chain(params.split('
 			const genericTypeMatches = genType.match(GENERICTYPEREGEX)
             const isGen = !!genericTypeMatches
             const genericTypes = isGen ? genTypes.map(x => x.trim()) : null
-			if(!genType) return;
+			if(!genType) return
 			const [ paramName, originName ] = genType.split(':').map(item => item.trim())
             const endingChar = originName.match(/!$/) ? '!' : ''
             const dependsOnParent = isGen && genericParentTypes && genericParentTypes.length > 0 && genericTypes.some(x => genericParentTypes.some(y => x === y))
