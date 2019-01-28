@@ -2537,6 +2537,21 @@ var runtest = function(s2s, assert) {
 
         assert.equal(normalizeString(rebuiltQuery), normalizeString(query))
       })
+      it('09 - ARGUMENTS. Should compile with empty arguments list', () => {
+
+        var input = transpileSchema(`
+
+        type Query {
+          ping(): String!
+        }
+        `)
+        var answer = compressString(input)
+        var correct = compressString(`
+        type Query {
+          ping: String!
+        }`)
+        assert.equal(answer,correct)
+      })
     }))
 }
 
