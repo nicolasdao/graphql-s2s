@@ -57,14 +57,21 @@ const escapeGraphQlSchemaPlus = (sch, cr, t) => {
  */
 const getSchemaBits = (sch='') => {
 	const escapedSchemaWithComments = escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc)
-	const { schema:escSchemaWithEscComments, tokens } = (escapedSchemaWithComments.match(/#(.*?)░/g) || []).reduce((acc,m) => {
+
+	const comments = [
+		...(escapedSchemaWithComments.match(/#(.*?)░/g) || []),
+		...(escapedSchemaWithComments.match(/"""░(.*?)░\s*"""░/g) || []),
+		...(escapedSchemaWithComments.match(/"([^"]+)"░/g) || []),
+	]
+	const { schema:escSchemaWithEscComments, tokens } = comments.reduce((acc,m) => {
 		const commentToken = `#${newShortId()}░`
 		acc.schema = acc.schema.replace(m, commentToken)
 		acc.tokens.push({ id: commentToken, value: m })
 		return acc
 	}, { schema: escapedSchemaWithComments, tokens: [] })
+	
 	// We append '\n' to help isolating the 'union'
-	const schemaWithoutComments = ' ' + sch.replace(/#(.*?)\n/g, '') + '\n'
+	const schemaWithoutComments = ' ' + sch.replace(/#(.*?)\n/g, '').replace(/"""\s*\n([^]*?)\n\s*"""\s*\n/g, '').replace(/"([^"]+)"\n/g, '') + '\n'
 	const escapedSchemaWithoutComments = escapeGraphQlSchemaPlus(schemaWithoutComments, carrReturnEsc, tabEsc)
 	return _.flatten([TYPE_REGEX, INPUT_REGEX, ENUM_REGEX, INTERFACE_REGEX, ABSTRACT_REGEX, SCALAR_REGEX, UNION_REGEX]
 	.map(rx =>
@@ -127,12 +134,18 @@ const getSchemaEntity = firstLine =>
 	firstLine.indexOf('scalar') == 0 ? { type: 'SCALAR', name: firstLine.match(/scalar\s+(.*?)\s+.*/)[1].trim() } :
 	{ type: null, name: null }
 
-const getCommentsBits = (sch) =>
-	(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(/#(.*?)░([^#]*?)({|:)/g) || [])
+const getCommentsBits = (sch) => 
+	(escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc).match(/░\s*[#"](.*?)░([^#"]*?)({|}|:)/g) || [])
 	.filter(x => x.match(/{$/))
 	.map(c => {
 		const parts = _(c.split(carrReturnEsc).map(l => l.replace(/_t_/g, '    ').trim())).filter(x => x != '')
-		const hashCount = parts.reduce((a,b) => a + (b.indexOf('#') == 0 ? 1 : 0), 0)
+		const hashCount = parts.reduce((a,b) => {
+			a.count = a.count + (b.indexOf('#') == 0 || b.indexOf('"') == 0 || a.inComment ? 1 : 0)
+			if (b.indexOf('"""') === 0) {
+				a.inComment = !a.inComment
+			}
+			return a
+		}, { count: 0, inComment: false }).count
 		return { text: parts.initial(), property: getSchemaEntity(parts.last()), comments: hashCount == parts.size() - 1 }
 	})
 	.filter(x => x.comments).map(x => ({ text: x.text.join('\n'), property: x.property }))
@@ -354,9 +367,12 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
 	.next(meta => _(blockParts).reduce((a, part) => {
 		const p = part.trim()
 		const mData = meta.filter(m => m.schemaName == p).first() || null
-		if (p.indexOf('#') == 0)
+		if (p.indexOf('#') == 0 || p.indexOf('"') == 0 || a.insideComment) {
+			if (p.indexOf('"""') === 0) {
+				a.insideComment = !a.insideComment
+			}
 			a.comments.push(p)
-		else {
+		} else {
 			const prop = p.replace(/ +(?= )/g,'').replace(/,$/, '')
 			const paramsMatch  = prop.replace(/@.+/, '').match(PROPERTYPARAMSREGEX)
 			const propDetails = paramsMatch
@@ -372,7 +388,7 @@ const getBlockProperties = (blockParts, baseObj, metadata) =>
 			a.comments = []
 		}
 		return a
-	}, { comments:[], props:[] }).props)
+	}, { insideComment: false, comments:[], props:[] }).props)
 	.val()
 
 /**
