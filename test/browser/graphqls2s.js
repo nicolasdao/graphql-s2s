@@ -31,6 +31,7 @@ var runtest = function(s2s, assert) {
 
   describe('graphqls2s', () =>
     describe('#transpileSchema', () => {
+      
       it('01 - BASICS: Should not affect a standard schema after transpilation.', () => {
         var output = transpileSchema(`
         # This is some description of 
@@ -1141,6 +1142,101 @@ var runtest = function(s2s, assert) {
           type PostUserRating implements Name{
             name: String!
             rating: String!
+          }`
+
+
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
+
+      it('25 - COMMENTS: Add management of description', () => {
+        var schema = `
+          # My comment
+
+          """
+          Description with multiple 
+          lines of my interface
+          """
+          interface Name {  
+            "Description of a field"
+            name: String! 
+          }
+
+          "Single line comment of the type"
+          type PostUserRating inherits Name implements Name {
+            """
+            Multi-line comment of member
+            """
+            rating: String!
+            # FIXME: Just a comment
+            other: Int
+          }
+          
+          "Test on enum"
+          enum SolutionModeleEnum {
+              "Comment 1"
+              P1
+
+              """
+              Comment 2 
+              multiline
+              """
+              P2
+
+              # Comment
+              P3
+          }
+          
+          # My comment
+          # multi-line
+          type AutreType {
+            x: Boolean
+          }
+
+          `
+
+        var schema_output = `
+          # My comment
+          """
+          Description with multiple
+          lines of my interface
+          """
+          interface Name { 
+              "Description of a field"
+              name: String!
+          }
+          
+          "Single line comment of the type"
+          type PostUserRating implements Name { 
+              "Description of a field"
+              name: String!
+              """
+              Multi-line comment of member
+              """
+              rating: String!
+              # FIXME: Just a comment
+              other: Int
+          }
+          
+          # My comment
+          # multi-line
+          type AutreType { 
+              x: Boolean
+          }
+          
+          "Test on enum"
+          enum SolutionModeleEnum { 
+              "Comment 1"
+              P1
+              """
+              Comment 2
+              multiline
+              """
+              P2
+              # Comment
+              P3
           }`
 
 
