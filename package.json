@@ -4,12 +4,13 @@
   "description": "Transpile an enriched GraphQL string schema (e.g. support for metadata, inheritance, generic types, ...) into the standard string schema understood by graphql.js and the Apollo server client.",
   "main": "./src/graphqls2s.js",
   "scripts": {
-    "test": "mocha ./test/node/*.js",
-    "test:dev": "MOCHA_ENV=dev mocha ./test/node/*.js",
-    "rls": "standard-version --release-as",
-    "lint": "eslint graphqls2s.js src/ test/ --fix",
     "build": "WEBPACK_ENV=build webpack",
     "dev": "WEBPACK_ENV=dev webpack",
+    "lint": "eslint graphqls2s.js src/ test/ --fix",
+    "push": "git push --follow-tags origin master && npm publish",
+    "rls": "standard-version --release-as",
+    "test": "mocha ./test/node/*.js",
+    "test:dev": "MOCHA_ENV=dev mocha ./test/node/*.js",
     "v": "node -e \"console.log(require('./package.json').version)\""
   },
   "repository": {
