@@ -806,7 +806,14 @@ let graphqls2s = {
 		.val(),
 	transpileSchema: graphQlSchema => chain(resetMemory())
 		.next(() => removeGraphMetadata(graphQlSchema))
-		.next(data => buildSchemaString(getSchemaParts(data.stdSchema, data.metadata)))
+		.next(data =>
+			buildSchemaString(
+				_.map(getSchemaParts(data.stdSchema, data.metadata), item => ({
+					...item,
+					blockProps: _.uniqBy(item.blockProps, 'value'),
+				}),)
+			)
+		)
 		.next(v => { resetMemory(); return v })
 		.val(),
 	extractGraphMetadata,
