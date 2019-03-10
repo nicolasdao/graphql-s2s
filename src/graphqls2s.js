@@ -808,10 +808,9 @@ let graphqls2s = {
 		.next(() => removeGraphMetadata(graphQlSchema))
 		.next(data =>
 			buildSchemaString(
-				_.map(getSchemaParts(data.stdSchema, data.metadata), item => ({
-					...item,
-					blockProps: _.uniqBy(item.blockProps, 'value'),
-				}),)
+				_.map(getSchemaParts(data.stdSchema, data.metadata), item => (Object.assign(
+					item,{blockProps: _.uniqBy(item.blockProps, 'value')}
+				)))
 			)
 		)
 		.next(v => { resetMemory(); return v })
