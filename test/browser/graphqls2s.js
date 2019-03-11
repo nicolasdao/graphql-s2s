@@ -1293,6 +1293,44 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
+      it('27 - FIX: Override properties should not be a property of the parent class', () => {
+         var schema = `
+          type Organism{
+            uuid:ID!
+            age:Int
+          }
+
+          type People inherits Organism{
+            name:String
+            age:String
+          }
+          type Person inherits People{
+            age:Int
+          }
+          `
+        var schema_output = `
+          type Organism{
+            uuid:ID!
+            age:Int
+          }
+
+          type People{
+            uuid:ID!
+            name:String
+            age:String
+          }
+
+          type Person{
+            uuid:ID!
+            name:String
+            age:Int
+          }
+         `
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
     }))
 
   describe('graphqls2s', () =>
