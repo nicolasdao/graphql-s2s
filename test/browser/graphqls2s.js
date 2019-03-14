@@ -1245,6 +1245,92 @@ var runtest = function(s2s, assert) {
         var correct = compressString(schema_output)
         assert.equal(answer,correct)
       })
+      it('26 - FIX: Should not duplicate properties', () => {
+         var schema = `
+          type Organism{
+            uuid:ID!
+          }
+
+          type People inherits Organism{
+            name:String
+          }
+
+          type Man inherits People{
+            name:String
+            bearded:Boolean
+          }         
+          type Boy inherits Man,People,Organism{
+            uuid:ID!
+            name:String
+            bearded:Boolean
+          }
+          `
+
+        var schema_output = `
+          type Organism{
+            uuid:ID!
+          }
+
+          type People{
+            uuid:ID!
+            name:String
+          }
+
+          type Man{
+            uuid:ID!
+            name:String
+            bearded:Boolean
+          }
+
+          type Boy{
+            uuid:ID!
+            name:String
+            bearded:Boolean
+          }
+         `
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
+      it('27 - FIX: Override properties should not be a property of the parent class', () => {
+         var schema = `
+          type Organism{
+            uuid:ID!
+            age:Int
+          }
+
+          type People inherits Organism{
+            name:String
+            age:String
+          }
+          type Person inherits People{
+            age:Int
+          }
+          `
+        var schema_output = `
+          type Organism{
+            uuid:ID!
+            age:Int
+          }
+
+          type People{
+            uuid:ID!
+            name:String
+            age:String
+          }
+
+          type Person{
+            uuid:ID!
+            name:String
+            age:Int
+          }
+         `
+        var output = transpileSchema(schema)
+        var answer = compressString(output)
+        var correct = compressString(schema_output)
+        assert.equal(answer,correct)
+      })
     }))
 
   describe('graphqls2s', () =>

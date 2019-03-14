@@ -545,7 +545,7 @@ const getObjWithExtensions = (obj, schemaObjects) => {
 			inherits: superClassesWithInheritance,
 			blockProps: (superClassesWithInheritance instanceof Array ?
 				_.toArray(_.flatten(_.concat(_.flatten(superClassesWithInheritance.map(function(subClass){
-				return subClass.blockProps
+				return subClass.blockProps.filter(prop=>!obj.blockProps.find(originalProp=>originalProp.details.name==prop.details.name))
 			})), obj.blockProps))):
 				_.toArray(_.flatten(_.concat(superClassesWithInheritance.blockProps, obj.blockProps)))
 			)
