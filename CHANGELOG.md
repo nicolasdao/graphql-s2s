@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.19.2"></a>
+## [0.19.2](https://github.com/nicolasdao/graphql-s2s/compare/v0.19.1...v0.19.2) (2019-03-14)
+
+
+
 <a name="0.19.1"></a>
 ## [0.19.1](https://github.com/nicolasdao/graphql-s2s/compare/v0.19.0...v0.19.1) (2019-02-23)
 
