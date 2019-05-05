@@ -46,6 +46,9 @@ const matchLeftNonGreedy = (str, startChar, endChar) => chain(str.match(new RegE
 
 const throwError = (v, msg) => v ? (() => {throw new Error(msg)})() : true
 
+const GRAPHQLSCALARTYPES = { 'ID': true, 'String': true, 'Float': true, 'Int': true, 'Boolean': true  }
+const isScalarType = type => GRAPHQLSCALARTYPES[type]
+
 /**
  * Check whether or not the 'type' that is defined in the 'schemaAST' is of type node.
  * 
@@ -53,12 +56,11 @@ const throwError = (v, msg) => v ? (() => {throw new Error(msg)})() : true
  * @param  {Array}    schemaAST Array of schema objects
  * @return {Boolean}            Result
  */
-const GRAPHQLSCALARTYPES = { 'ID': true, 'String': true, 'Float': true, 'Int': true, 'Boolean': true  }
 const isNodeType = (type, schemaAST) => 
     chain(throwError(!type, 'Error in method \'isNodeType\': Argument \'type\' is required.'))
         .next(() => type.replace(/!$/, ''))
         .next(type => (type.match(/^\[(.*?)\]$/) || [null, type])[1])
-        .next(type => GRAPHQLSCALARTYPES[type] 
+        .next(type => isScalarType(type)
             ? false 
             :   chain({ type, typeAST: schemaAST.find(x => x.name == type)})
                 .next(({type, typeAST}) => !typeAST 
@@ -405,5 +407,6 @@ module.exports = {
         start: startTime,
         log: logTime
     },
-    newShortId
+    newShortId,
+    isScalarType
 }

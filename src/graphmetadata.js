@@ -153,7 +153,13 @@ const extractGraphMetadata = (schema = '') => {
 
 	return graphQlMetadata
 }
-
+	
+/**
+ * [description]
+ * @param  {String} 	 schema				Schema with non-standard syntax.
+ * @return {String} 	 output.stdSchema	Schema without all the non-standard metadata. 
+ * @return {[Metatdata]} output.metadata	Array of Metadata object
+ */
 const removeGraphMetadata = (schema = '') => {
 	const meta = extractGraphMetadata(schema) || []
 	const directives = meta.filter(m => m.directive)

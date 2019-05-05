@@ -3,7 +3,14 @@
 # Table Of Contents
 > * [What It Does](#what-it-does)
 > * [Install](#install)
-> * [How To Use It](#how-to-use-it)
+> * [Getting Started](#getting-started)
+>	- [Basic](#basic)
+>	- [Type Inheritance](#type-inheritance)
+>	- [Generic Types](#generic-types)
+>	- [Metadata Decoration](#metadata-decoration)
+>	- [Deconstructing - Transforming - Rebuilding Queries](#deconstructing---transforming---rebuilding-queries)
+> * [How To](#how-to)
+>	- [How to use a custom name on generic types?](#how-to-use-a-custom-name-on-generic-types)
 > * [Examples](#examples)
 > * [Contribute](#contribute)
 > * [About Neap](#this-is-what-we-re-up-to)
@@ -33,7 +40,8 @@ It is also possible to embed it after installing the _graphql-s2s_ npm package:
 <script src="./node_modules/graphql-s2s/lib/graphqls2s.min.js"></script>
 ```
 
-# How To Use It
+# Getting Started
+## Basic
 ```js
 const { transpileSchema } = require('graphql-s2s').graphqls2s
 const { makeExecutableSchema } = require('graphql-tools')
@@ -72,9 +80,9 @@ const executableSchema = makeExecutableSchema({
 })
 ```
 
-[**Type Inheritance**](#type-inheritance)
+## Type Inheritance
 
-## Single Inheritance
+### Single Inheritance
 
 ```js
 const schema = `
@@ -95,7 +103,7 @@ type Student inherits Person {
 `
 ```
 
-## Multiple Inheritance
+### Multiple Inheritance
 
 ```js
 const schema = `
@@ -125,7 +133,8 @@ type Person inherits Node, Address {
 
 More details in the [code below](#type-inheritance).
 
-[**Generic Types**](#generic-types)
+## Generic Types
+
 ```js
 const schema = `
 # Defining a generic type
@@ -155,7 +164,8 @@ type Teacher {
 
 More details in the [code below](#generic-types).
 
-[**Metadata Decoration**](#metadata-decoration)
+## Metadata Decoration
+
 ```js
 const schema = `
 # Defining a custom 'node' metadata attribute
@@ -178,11 +188,59 @@ The enriched schema provides a richer and more compact notation. The transpiler 
 
 _Metadata_ can be added to decorate the schema types and properties. Add whatever you want as long as it starts with _@_ and start hacking your schema. The original intent of that feature was to decorate the schema with metadata _@node_ and _@edge_ so we could add metadata about the nature of the relations between types.
 
-[**Deconstructing - Transforming - Rebuilding Queries**](#deconstructing---transforming---rebuilding-queries)
+Metadata can also be used to customize generic types names as shown in section [How to use a custom name on generic types?](#how-to-use-a-custom-name-on-generic-types).
+
+## Deconstructing - Transforming - Rebuilding Queries
 
 This feature allows your GraphQl server to deconstruct any GraphQl query as an AST that can then be filtered and modified based on your requirements. That AST can then be rebuilt as a valid GraphQL query. A great example of that feature in action is the [__graphql-authorize__](https://github.com/nicolasdao/graphql-authorize.git) middleware for [__graphql-serverless__](https://github.com/nicolasdao/graphql-serverless) which filters query's properties based on the user's rights.
 
 For a concrete example, refer to the [code below](#deconstructing-transforming-rebuilding-queries).
+
+# How To
+## How to use a custom name on generic types?
+
+Use the special keyword `@alias` as follow:
+
+```js
+const schema = `
+  type Post {
+    code: String
+  }
+
+  type Brand {
+    id: ID!
+    name: String
+    posts: Page<Post>
+  }
+
+  @alias((T) => T + 's')
+  type Page<T> {
+    data: [T]
+  }
+  `
+```
+
+After transpilation, the resulting schema is:
+
+```js
+const output = transpileSchema(schema)
+// output:
+// =======
+// 	type Post {
+// 		code: String
+// 	}
+// 
+// 	type Brand {
+// 		id: ID!
+// 		name: String
+// 		posts: Posts
+// 	}
+// 
+// 	type Posts {
+// 		data: [Post]
+// 	}
+
+````
 
 # Examples
 _WARNING: the following examples will be based on '[graphql-tools](https://github.com/apollographql/graphql-tools)' from the Apollo team, but the string schema could also be used with the 'buildSchema' method from graphql.js_

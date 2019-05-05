@@ -29,920 +29,1128 @@ var runtest = function(s2s, assert) {
   var buildQuery = s2s.buildQuery
   var isTypeGeneric = s2s.isTypeGeneric
 
-  describe('graphqls2s', () =>
+  describe('graphqls2s', () => {
     describe('#transpileSchema', () => {
-      
-      it('01 - BASICS: Should not affect a standard schema after transpilation.', () => {
-        var output = transpileSchema(`
-        # This is some description of 
-        # what a Post object is.
-        type Post {
-          id: ID! 
-          # A name is a property.
-          name: String!
-        }
+      describe('BASIC', () => {
+        it('01 - Should not affect a standard schema after transpilation.', () => {
+          var output = transpileSchema(`
+          # This is some description of 
+          # what a Post object is.
+          type Post {
+            id: ID! 
+            # A name is a property.
+            name: String!
+          }
 
-        type PostUserRating {
-          # Rating indicates the rating a user gave 
-          # to a post.
-          rating: PostRating!
-        }`)
-        var answer = compressString(output)
-        var correct = compressString(`
-        # This is some description of 
-        # what a Post object is.
-        type Post {
-          id: ID! 
-          # A name is a property.
-          name: String!
-        }
+          type PostUserRating {
+            # Rating indicates the rating a user gave 
+            # to a post.
+            rating: PostRating!
+          }`)
+          var answer = compressString(output)
+          var correct = compressString(`
+          # This is some description of 
+          # what a Post object is.
+          type Post {
+            id: ID! 
+            # A name is a property.
+            name: String!
+          }
 
-        type PostUserRating {
-          # Rating indicates the rating a user gave 
-          # to a post.
-          rating: PostRating!
-        }`)
-        assert.equal(answer,correct)
+          type PostUserRating {
+            # Rating indicates the rating a user gave 
+            # to a post.
+            rating: PostRating!
+          }`)
+          assert.equal(answer,correct)
+        })
       })
-      it('02 - SPECIAL KEYWORDS: Should support extending schema using the \'extend\' keyword.', () => {
-        var output = transpileSchema(`
-        type Query {
-          bars: [Bar]!
-        }
-        type Bar {
-          id: ID
-        }
-        type Foo {
-          id: String!
-        }
-        extend    type Query {
-          foos: [Foo]!
-        }`)
-        var answer = compressString(output)
-        var correct = compressString(`
-        type Query {
-          bars: [Bar]!
-        }
-        type Bar {
-          id: ID
-        }
-        type Foo {
-          id: String!
-        }
-        extend type Query {
-          foos: [Foo]!
-        }`)
-        assert.equal(answer,correct)
+      describe('SPECIAL KEYWORDS', () => {
+        it('01 - Should support extending schema using the \'extend\' keyword.', () => {
+          var output = transpileSchema(`
+          type Query {
+            bars: [Bar]!
+          }
+          type Bar {
+            id: ID
+          }
+          type Foo {
+            id: String!
+          }
+          extend    type Query {
+            foos: [Foo]!
+          }`)
+          var answer = compressString(output)
+          var correct = compressString(`
+          type Query {
+            bars: [Bar]!
+          }
+          type Bar {
+            id: ID
+          }
+          type Foo {
+            id: String!
+          }
+          extend type Query {
+            foos: [Foo]!
+          }`)
+          assert.equal(answer,correct)
+        })
+        it('02 - Should allow to define custom names in generic types using the @alias keyword.', () => {
+          var schema = `
+          type Post {
+            code: String
+          }
+
+          type Brand {
+            id: ID!
+            name: String
+            posts: Page<Post>
+          }
+
+          @alias((T) => T + 's')
+          type Page<T> {
+            data: [T]
+          }
+          `
+          var schema_output = `
+          type Post {
+            code: String
+          }
+
+          type Brand {
+            id: ID!
+            name: String
+            posts: Posts
+          }
+
+          type Posts {
+            data: [Post]
+          }
+          `
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('03 - Should support custom scalar types.', () => {
+
+          var schema_input = `
+          scalar Date
+          scalar Like
+
+          # This is some description of 
+          # what a Post object is plus an attemp to fool the scalar type.
+          type Post {
+            id: ID! 
+            # A name is a property.
+            name: String!
+            creationDate: Date
+            likeRate: Like
+          }
+
+          scalar Strength
+
+          type Test { id: ID }
+
+          type PostUserRating {
+            # Rating indicates the rating a user gave 
+            # to a post. Fooling test: type Test { id: ID }
+            rating: Strength!
+          }
+          `
+
+          var schema_output = `
+          # This is some description of 
+          # what a Post object is plus an attemp to fool the scalar type.
+          type Post {
+            id: ID! 
+            # A name is a property.
+            name: String!
+            creationDate: Date
+            likeRate: Like
+          }
+
+          type Test { id: ID }
+
+          type PostUserRating {
+            # Rating indicates the rating a user gave 
+            # to a post. Fooling test: type Test { id: ID }
+            rating: Strength!
+          }
+
+
+          scalar Date
+          scalar Like
+          scalar Strength`
+          var output = transpileSchema(schema_input)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('04 - Should support union types.', () => {
+          var schema = `
+          scalar Date
+          scalar Like
+
+          union Product = Bicycle | Racket
+          union Details    =     PriceDetails | RacketDetails     
+
+          # This is some description of 
+          # what a Post object is plus an attemp to fool the union type.
+          type Post {
+            id: ID! 
+            # A name is a property.
+            name: String!
+            creationDate: Date
+            likeRate: Like
+          }
+
+          scalar Strength
+
+          type Test { id: ID }
+
+          type PostUserRating {
+            # Rating indicates the rating a user gave 
+            # to a post. Fooling test: type Test { id: ID }
+            rating: Strength!
+          }`
+
+          var schema_output = `
+          # This is some description of 
+          # what a Post object is plus an attemp to fool the union type.
+          type Post {
+            id: ID! 
+            # A name is a property.
+            name: String!
+            creationDate: Date
+            likeRate: Like
+          }
+
+          type Test { id: ID }
+
+          type PostUserRating {
+            # Rating indicates the rating a user gave 
+            # to a post. Fooling test: type Test { id: ID }
+            rating: Strength!
+          }
+
+
+          scalar Date
+          scalar Like
+          scalar Strength
+          union Product = Bicycle | Racket
+          union Details = PriceDetails | RacketDetails`
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('05 - Should allow to define custom names in nested generic types', () => {
+          var schema = `
+          @alias((T) => 'Standard' + T)
+          type StandardData<T> {
+            id: ID!
+            value: T
+          }
+
+          @alias((T) => T + 's')
+          type Paged<T> {
+            data: [StandardData<T  >]
+            cursor: ID
+          }
+
+          type Post {
+            code: String
+          }
+
+          type User {
+            posts: Paged<Post  >
+          }
+          `
+          var schema_output = `
+          type Post {
+            code: String
+          }
+
+          type User {
+            posts: Posts
+          }
+
+          type StandardPost {
+            id: ID!
+            value: Post
+          }
+
+          type Posts {
+            data: [StandardPost]
+            cursor: ID
+          }
+          `
+
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
       })
-      it('03 - SPECIAL KEYWORDS: Should allow to define custom names in generic types using the @alias keyword.', () => {
-        var schema = `
-        type Brand {
-          id: ID!
-          name: String
-          posts: Page<Post>
-        }
+      describe('GENERIC TYPES', () => {
+        it('01 - Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
+          // Basic
+          var output_01 = transpileSchema(`
+          type Post {
+            code: String
+          }
 
-        @alias((T) => T + 's')
-        type Page<T> {
-          data: [T]
-        }
-        `
-        var schema_output = `
-        type Brand {
-          id: ID!
-          name: String
-          posts: Posts
-        }
+          type Paged<T> {
+            data: [T]
+            cursor: ID
+          }
 
-        type Posts {
-          data: [Post]
-        }
-        `
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('04 - SPECIAL KEYWORDS: Should support custom scalar types.', () => {
-        var schema_input = `scalar Date
-      scalar Like
+          type User {
+            posts: Paged<Post>
+          }
+          `)
+          var answer_01 = compressString(output_01)
+          var correct_01 = compressString(`
+          type Post {
+            code: String
+          }
 
-        # This is some description of 
-        # what a Post object is plus an attemp to fool the scalar type.
-        type Post {
-          id: ID! 
-          # A name is a property.
-          name: String!
-          creationDate: Date
-          likeRate: Like
-        }
+          type User {
+            posts: PagedPost
+          }
+          type PagedPost {
+            data: [Post]
+            cursor: ID
+          }
+          `)
+          assert.equal(answer_01,correct_01)
 
-        scalar Strength
+          // Medium complexity
+          var schema_02 = `
+          type Post {
+            code: String
+          }
 
-        type Test { id: ID }
+          type StandardData<T> {
+            id: ID!
+            value: T
+          }
 
-        type PostUserRating {
-          # Rating indicates the rating a user gave 
-          # to a post. Fooling test: type Test { id: ID }
-          rating: Strength!
-        }`
+          type Paged<T> {
+            data: [StandardData<T>]
+            cursor: ID
+          }
 
-        var schema_output = `
-        # This is some description of 
-        # what a Post object is plus an attemp to fool the scalar type.
-        type Post {
-          id: ID! 
-          # A name is a property.
-          name: String!
-          creationDate: Date
-          likeRate: Like
-        }
+          type User {
+            posts: Paged<Post>
+          }
+          `
+          var schema_output_02 = `
+          type Post {
+            code: String
+          }
 
-        type Test { id: ID }
+          type User {
+            posts: PagedPost
+          }
 
-        type PostUserRating {
-          # Rating indicates the rating a user gave 
-          # to a post. Fooling test: type Test { id: ID }
-          rating: Strength!
-        }
+          type StandardDataPost {
+            id: ID!
+            value: Post
+          }
 
+          type PagedPost {
+            data: [StandardDataPost]
+            cursor: ID
+          }
+          `
 
-        scalar Date
-        scalar Like
-        scalar Strength`
-        var output = transpileSchema(schema_input)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('05 - SPECIAL KEYWORDS: Should support union types.', () => {
-        var schema = `scalar Date
-      scalar Like
+          var output_02 = transpileSchema(schema_02)
+          var answer_02 = compressString(output_02)
+          var correct_02 = compressString(schema_output_02)
+          assert.equal(answer_02,correct_02)
 
-        union Product = Bicycle | Racket
-      union Details    =     PriceDetails | RacketDetails     
+          // More complicated test
 
-        # This is some description of 
-        # what a Post object is plus an attemp to fool the union type.
-        type Post {
-          id: ID! 
-          # A name is a property.
-          name: String!
-          creationDate: Date
-          likeRate: Like
-        }
+          var schema_03 = `
+          type Post {
+            code: String
+          }
 
-        scalar Strength
+          type AnotherDeeperGeneric<T> {
+            data: T
+          }
 
-        type Test { id: ID }
+          type StandardData<T> {
+            id: ID!
+            value: T
+            magic: AnotherDeeperGeneric<T>
+          }
 
-        type PostUserRating {
-          # Rating indicates the rating a user gave 
-          # to a post. Fooling test: type Test { id: ID }
-          rating: Strength!
-        }`
+          type Paged<T> {
+            data: [StandardData<T>]
+            cursor: ID
+          }
 
-        var schema_output = `
-        # This is some description of 
-        # what a Post object is plus an attemp to fool the union type.
-        type Post {
-          id: ID! 
-          # A name is a property.
-          name: String!
-          creationDate: Date
-          likeRate: Like
-        }
+          type User {
+            posts: Paged<Post>
+          }
+          `
+          var schema_output_03 = `
+          type Post {
+            code: String
+          }
 
-        type Test { id: ID }
+          type User {
+            posts: PagedPost
+          }
 
-        type PostUserRating {
-          # Rating indicates the rating a user gave 
-          # to a post. Fooling test: type Test { id: ID }
-          rating: Strength!
-        }
+          type AnotherDeeperGenericPost {
+            data: Post
+          }
 
+          type StandardDataPost {
+            id: ID!
+            value: Post
+            magic: AnotherDeeperGenericPost
+          }
 
-        scalar Date
-        scalar Like
-        scalar Strength
-        union Product = Bicycle | Racket
-        union Details = PriceDetails | RacketDetails`
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('06 - SPECIAL KEYWORDS: Should allow to define custom names in nested generic types', () => {
-        var schema = `
-        @alias((T) => 'Standard' + T)
-        type StandardData<T> {
-          id: ID!
-          value: T
-        }
+          type PagedPost {
+            data: [StandardDataPost]
+            cursor: ID
+          }`
 
-        @alias((T) => T + 's')
-        type Paged<T> {
-          data: [StandardData<T  >]
-          cursor: ID
-        }
+          var output_03 = transpileSchema(schema_03)
+          var answer_03 = compressString(output_03)
+          var correct_03 = compressString(schema_output_03)
+          assert.equal(answer_03,correct_03)
 
-        type User {
-          posts: Paged<Post  >
-        }
-        `
-        var schema_output = `
-        type User {
-          posts: Posts
-        }
+          // Support for the required symbol
+          var schema_04 = `
+          type Post {
+            code: String
+          }
 
-        type StandardPost {
-          id: ID!
-          value: Post
-        }
+          type StandardData<T> {
+            id: ID!
+            value: T!
+          }
 
-        type Posts {
-          data: [StandardPost]
-          cursor: ID
-        }
-        `
+          type Paged<T> {
+            data: [StandardData<T>]!
+            cursor: ID
+          }
 
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('07 - GENERIC TYPES: Should create a new type for each instance of a generic type, as well as removing the original generic type definition.', () => {
-        // Basic
-        var output_01 = transpileSchema(`
-        type Paged<T> {
-          data: [T]
-          cursor: ID
-        }
+          type User {
+            posts: Paged<Post>!
+          }
+          `
+          var schema_output_04 = `
+          type Post {
+            code: String
+          }
 
-        type User {
-          posts: Paged<Post>
-        }
-        `)
-        var answer_01 = compressString(output_01)
-        var correct_01 = compressString(`
-        type User {
-          posts: PagedPost
-        }
-        type PagedPost {
-          data: [Post]
-          cursor: ID
-        }
-        `)
-        assert.equal(answer_01,correct_01)
+          type User {
+            posts: PagedPost!
+          }
 
-        // Medium complexity
-        var schema_02 = `
-        type StandardData<T> {
-          id: ID!
-          value: T
-        }
+          type StandardDataPost {
+            id: ID!
+            value: Post!
+          }
 
-        type Paged<T> {
-          data: [StandardData<T>]
-          cursor: ID
-        }
+          type PagedPost {
+            data: [StandardDataPost]!
+            cursor: ID
+          }
+          `
 
-        type User {
-          posts: Paged<Post>
-        }
-        `
-        var schema_output_02 = `
-        type User {
-          posts: PagedPost
-        }
+          var output_04 = transpileSchema(schema_04)
+          var answer_04 = compressString(output_04)
+          var correct_04 = compressString(schema_output_04)
+          assert.equal(answer_04,correct_04)
+        })
+        it('02 - Should create a new type for each instance of a generic type, even for generic with multi-types, as well as removing the original generic type definition.', () => {
 
-        type StandardDataPost {
-          id: ID!
-          value: Post
-        }
+          var schema = `
+          type Post {
+            code: String
+          }
 
-        type PagedPost {
-          data: [StandardDataPost]
-          cursor: ID
-        }
-        `
+          type Date {
+            time: String
+          }
 
-        var output_02 = transpileSchema(schema_02)
-        var answer_02 = compressString(output_02)
-        var correct_02 = compressString(schema_output_02)
-        assert.equal(answer_02,correct_02)
+          type StandardData<T,U> {
+            id: ID!
+            value: T
+            Dimension: U
+          }
 
-        // More complicated test
+          type Paged<T,U> {
+            data: [StandardData< T, U>]
+            cursor: ID
+          }
 
-        var schema_03 = `
-        type AnotherDeeperGeneric<T> {
-          data: T
-        }
+          type User {
+            posts: Paged<Post, Date>
+          }
+          `
+          var schema_output = `
+          type Post {
+            code: String
+          }
 
-        type StandardData<T> {
-          id: ID!
-          value: T
-          magic: AnotherDeeperGeneric<T>
-        }
+          type Date {
+            time: String
+          }
 
-        type Paged<T> {
-          data: [StandardData<T>]
-          cursor: ID
-        }
-
-        type User {
-          posts: Paged<Post>
-        }
-        `
-        var schema_output_03 = `
-        type User {
-          posts: PagedPost
-        }
-
-        type AnotherDeeperGenericPost {
-          data: Post
-        }
-
-        type StandardDataPost {
-          id: ID!
-          value: Post
-          magic: AnotherDeeperGenericPost
-        }
-
-        type PagedPost {
-          data: [StandardDataPost]
-          cursor: ID
-        }`
-
-        var output_03 = transpileSchema(schema_03)
-        var answer_03 = compressString(output_03)
-        var correct_03 = compressString(schema_output_03)
-        assert.equal(answer_03,correct_03)
-
-        // Support for the required symbol
-        var schema_04 = `
-        type StandardData<T> {
-          id: ID!
-          value: T!
-        }
-
-        type Paged<T> {
-          data: [StandardData<T>]!
-          cursor: ID
-        }
-
-        type User {
-          posts: Paged<Post>!
-        }
-        `
-        var schema_output_04 = `
-        type User {
-          posts: PagedPost!
-        }
-
-        type StandardDataPost {
-          id: ID!
-          value: Post!
-        }
-
-        type PagedPost {
-          data: [StandardDataPost]!
-          cursor: ID
-        }
-        `
-
-        var output_04 = transpileSchema(schema_04)
-        var answer_04 = compressString(output_04)
-        var correct_04 = compressString(schema_output_04)
-        assert.equal(answer_04,correct_04)
-      })
-      it('08 - GENERIC TYPES: Should create a new type for each instance of a generic type, even for generic with multi-types, as well as removing the original generic type definition.', () => {
-
-        var schema = `
-        type StandardData<T,U> {
-          id: ID!
-          value: T
-          Dimension: U
-        }
-
-        type Paged<T,U> {
-          data: [StandardData< T, U>]
-          cursor: ID
-        }
-
-        type User {
-          posts: Paged<Post, Date>
-        }
-        `
-        var schema_output = `
-        type User {
-          posts: PagedPostDate
-        }
-
-        type StandardDataPostDate {
-          id: ID!
-          value: Post
-          Dimension: Date
-        }
-
-        type PagedPostDate {
-          data: [StandardDataPostDate]
-          cursor: ID
-        }
-        `
-
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('09 - GENERIC TYPES: Should create a new type or input for each instance of a generic type, even for generic with multi-types and inputs, as well as removing the original generic input definition.', () => {
-
-        var schema = `
-        type Query {
-          user(identifier:ID!):User,
-          users(filter: Filter<UserFilterFields>):User
-        }
-        
-        input Filter<FilterFields> {
-          field: FilterFields!,
-          value: String!
-        }
-        
-        enum UserFilterFields {
-          firstName
-          lastName
-        }
-        
-        type StandardData<T,U> {
-          id: ID!
-          value: T
-          Dimension: U
-        }
-        
-        type Paged<T,U> {
-          data: [StandardData< T, U>]
-          cursor: ID
-        }
-        
-        type User {
-          firstName: String,
-          lastName: String,
-          posts: Paged<Post, Date>
-        }
-        `
-        var schema_output = `
-        type Query { 
-            user(identifier: ID!): User
-            users(filter: FilterUserFilterFields): User
-        }
-        type User { 
-            firstName: String
-            lastName: String
+          type User {
             posts: PagedPostDate
-        }
-        enum UserFilterFields { 
-            firstName
-            lastName
-        }
-        input FilterUserFilterFields { 
-            field: UserFilterFields!
-            value: String!
-        }
-        type StandardDataPostDate { 
+          }
+
+          type StandardDataPostDate {
             id: ID!
             value: Post
             Dimension: Date
-        }
-        type PagedPostDate { 
+          }
+
+          type PagedPostDate {
             data: [StandardDataPostDate]
             cursor: ID
-        }
-        `
+          }
+          `
 
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('10 - GENERIC TYPES: Should support non-nullable typed array (issue #23).', () => {
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('03 - Should create a new type or input for each instance of a generic type, even for generic with multi-types and inputs, as well as removing the original generic input definition.', () => {
 
-        var schema = `
-        type Paged<T> {
-          data: [T!]!
-          cursor: ID
-        }
+          var schema = `
+          type Post {
+            code: String
+          }
 
-        type Student {
-          name: String
-          questions: Paged<Question>
-        }
-        `
+          type Date {
+            time: String
+          }
 
-        var schema_output = `
-        type Student {
-            name: String
-            questions: PagedQuestion
-        }
-        type PagedQuestion {
-            data: [Question!]!
+          type Query {
+            user(identifier:ID!):User,
+            users(filter: Filter<UserFilterFields>):User
+          }
+          
+          input Filter<FilterFields> {
+            field: FilterFields!,
+            value: String!
+          }
+          
+          enum UserFilterFields {
+            firstName
+            lastName
+          }
+          
+          type StandardData<T,U> {
+            id: ID!
+            value: T
+            Dimension: U
+          }
+          
+          type Paged<T,U> {
+            data: [StandardData< T, U>]
             cursor: ID
-        }
-        `
+          }
+          
+          type User {
+            firstName: String,
+            lastName: String,
+            posts: Paged<Post, Date>
+          }
+          `
+          var schema_output = `
+          type Post {
+            code: String
+          }
 
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
+          type Date {
+            time: String
+          }
+
+          type Query { 
+              user(identifier: ID!): User
+              users(filter: FilterUserFilterFields): User
+          }
+          type User { 
+              firstName: String
+              lastName: String
+              posts: PagedPostDate
+          }
+          enum UserFilterFields { 
+              firstName
+              lastName
+          }
+          input FilterUserFilterFields { 
+              field: UserFilterFields!
+              value: String!
+          }
+          type StandardDataPostDate { 
+              id: ID!
+              value: Post
+              Dimension: Date
+          }
+          type PagedPostDate { 
+              data: [StandardDataPostDate]
+              cursor: ID
+          }
+          `
+
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('04 - Should support non-nullable typed array (issue #23).', () => {
+
+          var schema = `
+          type Question {
+            value: String
+          }
+
+          type Paged<T> {
+            data: [T!]!
+            cursor: ID
+          }
+
+          type Student {
+            name: String
+            questions: Paged<Question>
+          }
+          `
+
+          var schema_output = `
+          type Question {
+            value: String
+          }
+          
+          type Student {
+              name: String
+              questions: PagedQuestion
+          }
+          type PagedQuestion {
+              data: [Question!]!
+              cursor: ID
+          }
+          `
+
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
       })
-      it('11 - METADATA: Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
-        var output = transpileSchema(`
-        @node
-        type Brand {
-          id: ID!
-          name: String
-          @edge('<-[ABOUT]-')
-          posts: [Post]
-        }
+      describe('METADATA', () => {
+        it('01 - Should remove any metadata from the GraphQL schema so it can be compiled by Graphql.js.', () => {
+          var output = transpileSchema(`
+          @node
+          type Brand {
+            id: ID!
+            name: String
+            @edge('<-[ABOUT]-')
+            posts: [Post]
+          }
 
-        @miracle
-        input User {
-          posts: [Post]
-        }
-        `)
-        var answer = compressString(output)
-        var correct = compressString(`
-        type Brand {
-          id: ID!
-          name: String
-          posts: [Post]
-        }
+          @miracle
+          input User {
+            posts: [Post]
+          }
+          `)
+          var answer = compressString(output)
+          var correct = compressString(`
+          type Brand {
+            id: ID!
+            name: String
+            posts: [Post]
+          }
 
-        input User {
-          posts: [Post]
-        }
-        `)
-        assert.equal(answer,correct)
+          input User {
+            posts: [Post]
+          }
+          `)
+          assert.equal(answer,correct)
+        })
       })
-      it('12 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
-        var schema = `
-        # ### Page - Pagination Metadata
-        # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
-        # Example:
-        #
-        # \`\`\`js
-        # getData(first: 100, skip: 200)
-        # \`\`\`
-        # Skips the first 200 items, and gets the next 100.
-        #
-        # To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
-        # example above, the returned Page object could be:
-        #
-        # \`\`\`js
-        # {
-        # first: 100,
-        # skip: 200,
-        # current: 3,
-        # total: {
-        #   size: 1000,
-        #   pages: 10
-        # }
-        # }
-        # \`\`\`
-        type Page {
-          # The pagination parameter sent in the query (type, input {})
-          first: Int!
-
-          # The pagination parameter sent in the query
-          skip: Int!
-
-          # The convertion from 'first' and 'after' in terms of the current page
-          # (e.g. { first: 100, after: 200 } -> current: 3).
-            current: Int!
-
-            # Inspect the total size of your dataset ignoring pagination.
-            total: DatasetSize
-        }
-
-        # ### DatasetSize - Pagination Metadata
-        # Used in the Page object to describe the total number of pages available.
-        type DatasetSize {
-          size: Int!
-          pages: Int!
-        }}
-        `
-        var schema_output = `
-        # ### Page - Pagination Metadata
-        # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
-        # Example:
-        #
-        # \`\`\`js
-        # getData(first: 100, skip: 200)
-        # \`\`\`
-        # Skips the first 200 items, and gets the next 100.
-        #
-        # To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
-        # example above, the returned Page object could be:
-        #
-        # \`\`\`js
-        # {
-        # first: 100,
-        # skip: 200,
-        # current: 3,
-        # total: {
-        #   size: 1000,
-        #   pages: 10
-        # }
-        # }
-        # \`\`\`
-        type Page {
+      describe('COMMENTS', () => {
+        it('01 - Should successfully transpile the schema even when there are complex markdown comments containing code blocks.', () => {
+          var schema = `
+          # ### Page - Pagination Metadata
+          # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
+          # Example:
+          #
+          # \`\`\`js
+          # getData(first: 100, skip: 200)
+          # \`\`\`
+          # Skips the first 200 items, and gets the next 100.
+          #
+          # To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
+          # example above, the returned Page object could be:
+          #
+          # \`\`\`js
+          # {
+          # first: 100,
+          # skip: 200,
+          # current: 3,
+          # total: {
+          #   size: 1000,
+          #   pages: 10
+          # }
+          # }
+          # \`\`\`
+          type Page {
             # The pagination parameter sent in the query (type, input {})
             first: Int!
+
             # The pagination parameter sent in the query
             skip: Int!
+
             # The convertion from 'first' and 'after' in terms of the current page
             # (e.g. { first: 100, after: 200 } -> current: 3).
-            current: Int!
-            # Inspect the total size of your dataset ignoring pagination.
-            total: DatasetSize
-        }
+              current: Int!
 
-        # ### DatasetSize - Pagination Metadata
-        # Used in the Page object to describe the total number of pages available.
-        type DatasetSize {
+              # Inspect the total size of your dataset ignoring pagination.
+              total: DatasetSize
+          }
+
+          # ### DatasetSize - Pagination Metadata
+          # Used in the Page object to describe the total number of pages available.
+          type DatasetSize {
             size: Int!
             pages: Int!
-        }`
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
+          }}
+          `
+          var schema_output = `
+          # ### Page - Pagination Metadata
+          # The Page object represents metadata about the size of the dataset returned. It helps with pagination.
+          # Example:
+          #
+          # \`\`\`js
+          # getData(first: 100, skip: 200)
+          # \`\`\`
+          # Skips the first 200 items, and gets the next 100.
+          #
+          # To help represent this query using pages, GraphHub adds properties like _current_ and _total_. In the
+          # example above, the returned Page object could be:
+          #
+          # \`\`\`js
+          # {
+          # first: 100,
+          # skip: 200,
+          # current: 3,
+          # total: {
+          #   size: 1000,
+          #   pages: 10
+          # }
+          # }
+          # \`\`\`
+          type Page {
+              # The pagination parameter sent in the query (type, input {})
+              first: Int!
+              # The pagination parameter sent in the query
+              skip: Int!
+              # The convertion from 'first' and 'after' in terms of the current page
+              # (e.g. { first: 100, after: 200 } -> current: 3).
+              current: Int!
+              # Inspect the total size of your dataset ignoring pagination.
+              total: DatasetSize
+          }
+
+          # ### DatasetSize - Pagination Metadata
+          # Used in the Page object to describe the total number of pages available.
+          type DatasetSize {
+              size: Int!
+              pages: Int!
+          }`
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('02 - Should successfully transpile the schema even when there are complex markdown comments containing code blocks from inherited types (bug #15).', () => {
+          var schema = `
+          # The most generic type of item. See also: schema.org/Thing
+          type Thing {
+            description: String
+            identifier: ID!
+            name: String
+            url: String
+          }
+
+          # A person (alive, dead, undead, or fictional). See also: schema.org/Person
+          type Person inherits Thing {
+            # Person Blabla
+            email: String
+            familyName: String
+            givenName: String
+          }
+          `
+
+          var schema_output = `
+          # The most generic type of item. See also: schema.org/Thing
+          type Thing {
+            description: String
+            identifier: ID!
+            name: String
+            url: String
+          }
+
+          # A person (alive, dead, undead, or fictional). See also: schema.org/Person
+          type Person {
+            # Person Blabla
+            email: String
+            familyName: String
+            givenName: String
+            description: String
+            identifier: ID!
+            name: String
+            url: String
+          }`
+          var output = transpileSchema(schema)
+          //console.log(output)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('03 - Add management of description', () => {
+          var schema = `
+            # My comment
+
+            """
+            Description with multiple 
+            lines of my interface
+            """
+            interface Name {  
+              "Description of a field"
+              name: String! 
+            }
+
+            "Single line comment of the type"
+            type PostUserRating inherits Name implements Name {
+              """
+              Multi-line comment of member
+              """
+              rating: String!
+              # FIXME: Just a comment
+              other: Int
+            }
+            
+            "Test on enum"
+            enum SolutionModeleEnum {
+                "Comment 1"
+                P1
+
+                """
+                Comment 2 
+                multiline
+                """
+                P2
+
+                # Comment
+                P3
+            }
+            
+            # My comment
+            # multi-line
+            type AutreType {
+              x: Boolean
+            }
+
+            `
+
+          var schema_output = `
+            # My comment
+            """
+            Description with multiple
+            lines of my interface
+            """
+            interface Name { 
+                "Description of a field"
+                name: String!
+            }
+            
+            "Single line comment of the type"
+            type PostUserRating implements Name { 
+                """
+                Multi-line comment of member
+                """
+                rating: String!
+                # FIXME: Just a comment
+                other: Int
+                "Description of a field"
+                name: String!
+            }
+            
+            # My comment
+            # multi-line
+            type AutreType { 
+                x: Boolean
+            }
+            
+            "Test on enum"
+            enum SolutionModeleEnum { 
+                "Comment 1"
+                P1
+                """
+                Comment 2
+                multiline
+                """
+                P2
+                # Comment
+                P3
+            }`
+
+
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
       })
-      it('13 - COMMENTS: Should successfully transpile the schema even when there are complex markdown comments containing code blocks from inherited types (bug #15).', () => {
-        var schema = `
-        # The most generic type of item. See also: schema.org/Thing
-        type Thing {
-          description: String
-          identifier: ID!
-          name: String
-          url: String
-        }
+      describe('DIRECTIVES', () => {
+        it('01 - Should support directives.', () => {
 
-        # A person (alive, dead, undead, or fictional). See also: schema.org/Person
-        type Person inherits Thing {
-          # Person Blabla
-          email: String
-          familyName: String
-          givenName: String
-        }
-        `
-        var schema_output = `
-        # The most generic type of item. See also: schema.org/Thing
-        type Thing {
-          description: String
-          identifier: ID!
-          name: String
-          url: String
-        }
+          var schema = `
+          directive @isAuthenticated on QUERY | FIELD
+          directive @deprecated
+          (
+            reason: String = "No longer on supported"
+          ) on FIELD_DEFINITION | ENUM_VALUE
 
-        # A person (alive, dead, undead, or fictional). See also: schema.org/Person
-        type Person {
-          description: String
-          identifier: ID!
-          name: String
-          url: String
-          # Person Blabla
-          email: String
-          familyName: String
-          givenName: String
-        }`
-        var output = transpileSchema(schema)
-        //console.log(output)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('14 - DIRECTIVES: Should support directives.', () => {
+          type Post {
+            code: String
+          }
 
-        var schema = `
-        directive @isAuthenticated on QUERY | FIELD
-        directive @deprecated
-        (
-          reason: String = "No longer on supported"
-        ) on FIELD_DEFINITION | ENUM_VALUE
+          type Date {
+            code: String
+          }
 
-        type ExampleType {
-          newField: String 
-          oldField: String @deprecated(reason: "Use 'newField'.")
-        }
+          type ExampleType {
+            newField: String 
+            oldField: String @deprecated(reason: "Use 'newField'.")
+          }
 
-        type StandardData<T,U> {
-          @auth
-          id: ID!
-          value: T
-          Dimension: U 
-        }
+          type StandardData<T,U> {
+            @auth
+            id: ID!
+            value: T
+            Dimension: U 
+          }
 
-        type Paged<T,U> {
-          data: [StandardData< T, U>]
-          cursor: ID @isAuthenticated
-        }
+          type Paged<T,U> {
+            data: [StandardData< T, U>]
+            cursor: ID @isAuthenticated
+          }
 
-        type User {
-          posts: Paged<Post, Date>
-        }
-        `
-        var schema_output = `
-        directive @isAuthenticated on QUERY | FIELD
-        directive @deprecated
-        (
-          reason: String = "No longer on supported"
-        ) on FIELD_DEFINITION | ENUM_VALUE
+          type User {
+            posts: Paged<Post, Date>
+          }
+          `
+          var schema_output = `
+          directive @isAuthenticated on QUERY | FIELD
+          directive @deprecated
+          (
+            reason: String = "No longer on supported"
+          ) on FIELD_DEFINITION | ENUM_VALUE
 
-        type ExampleType {
-          newField: String 
-          oldField: String @deprecated(reason: "Use 'newField'.")
-        }
+          type Post {
+            code: String
+          }
 
-        type User {
-          posts: PagedPostDate
-        }
+          type Date {
+            code: String
+          }
 
-        type StandardDataPostDate {
-          id: ID!
-          value: Post
-          Dimension: Date 
-        }
+          type ExampleType {
+            newField: String 
+            oldField: String @deprecated(reason: "Use 'newField'.")
+          }
 
-        type PagedPostDate {
-          data: [StandardDataPostDate]
-          cursor: ID @isAuthenticated
-        }
-        `
+          type User {
+            posts: PagedPostDate
+          }
 
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('15 - DIRECTIVES: Should support directive after generic type.', () => {
-        var schema = `
-        directive @isAuthenticated on QUERY | FIELD
-        directive @deprecated(reason: String = "No longer on supported") on FIELD_DEFINITION | ENUM_VALUE
+          type StandardDataPostDate {
+            id: ID!
+            value: Post
+            Dimension: Date 
+          }
 
-        type ExampleType {
-          newField: String 
-          oldField: String @deprecated(reason: "Use 'newField'.")
-        }
+          type PagedPostDate {
+            data: [StandardDataPostDate]
+            cursor: ID @isAuthenticated
+          }
+          `
 
-        @alias((T,U) => T + U)
-        type StandardData<T,U> {
-          @auth
-          id: ID!
-          value: T
-          Dimension: U 
-        }
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('02 - Should support directive after generic type.', () => {
+          var schema = `
+          directive @isAuthenticated on QUERY | FIELD
+          directive @deprecated(reason: String = "No longer on supported") on FIELD_DEFINITION | ENUM_VALUE
 
-        type Paged<T,U> {
-          data: [StandardData< T, U>] @isAuthenticated
-          cursor: ID @isAuthenticated
-        }
+          type Post {
+            code: String
+          }
 
-        type User {
-          posts: Paged<Post, Date> @isAuthenticated
-          examples: Paged<ExampleType, Date> @deprecated(reason: "Use 'newField'.")
-        }
-        `
-        var schema_output = `
-        directive @isAuthenticated on QUERY | FIELD
-        directive @deprecated
-        (
-          reason: String = "No longer on supported"
-        ) on FIELD_DEFINITION | ENUM_VALUE
+          type Date {
+            code: String
+          }
 
-        type ExampleType {
-          newField: String 
-          oldField: String @deprecated(reason: "Use 'newField'.")
-        }
+          type ExampleType {
+            newField: String 
+            oldField: String @deprecated(reason: "Use 'newField'.")
+          }
 
-        type User {
-          posts: PagedPostDate @isAuthenticated
-          examples: PagedExampleTypeDate @deprecated(reason: "Use 'newField'.")
-        }
+          @alias((T,U) => T + U)
+          type StandardData<T,U> {
+            @auth
+            id: ID!
+            value: T
+            Dimension: U 
+          }
 
-        type PostDate {
-          id: ID!
-          value: Post
-          Dimension: Date 
-        }
+          type Paged<T,U> {
+            data: [StandardData< T, U>] @isAuthenticated
+            cursor: ID @isAuthenticated
+          }
 
-        type PagedPostDate {
-          data: [PostDate] @isAuthenticated
-          cursor: ID @isAuthenticated
-        }
+          type User {
+            posts: Paged<Post, Date> @isAuthenticated
+            examples: Paged<ExampleType, Date> @deprecated(reason: "Use 'newField'.")
+          }
+          `
+          var schema_output = `
+          directive @isAuthenticated on QUERY | FIELD
+          directive @deprecated
+          (
+            reason: String = "No longer on supported"
+          ) on FIELD_DEFINITION | ENUM_VALUE
 
-        type ExampleTypeDate {
-          id: ID!
-          value: ExampleType
-          Dimension: Date
-        }
+          type Post {
+            code: String
+          }
 
-        type PagedExampleTypeDate {
-          data: [ExampleTypeDate] @isAuthenticated
-          cursor: ID @isAuthenticated
-        }
-        `
+          type Date {
+            code: String
+          }
 
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('16 - DIRECTIVES: Should supports rogue native directives, i.e., native directive without explicit definitions (fix #14).', () => {
-        var schema = `
-        # Mutation
-        type Mutation {
-          createName(name: String!): Name
-        }
+          type ExampleType {
+            newField: String 
+            oldField: String @deprecated(reason: "Use 'newField'.")
+          }
+
+          type User {
+            posts: PagedPostDate @isAuthenticated
+            examples: PagedExampleTypeDate @deprecated(reason: "Use 'newField'.")
+          }
+
+          type PostDate {
+            id: ID!
+            value: Post
+            Dimension: Date 
+          }
+
+          type PagedPostDate {
+            data: [PostDate] @isAuthenticated
+            cursor: ID @isAuthenticated
+          }
+
+          type ExampleTypeDate {
+            id: ID!
+            value: ExampleType
+            Dimension: Date
+          }
+
+          type PagedExampleTypeDate {
+            data: [ExampleTypeDate] @isAuthenticated
+            cursor: ID @isAuthenticated
+          }
+          `
+
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('03 - Should supports rogue native directives, i.e., native directive without explicit definitions (fix #14).', () => {
+          var schema = `
+          # Mutation
+          type Mutation {
+            createName(name: String!): Name
+          }
+          
+          type Subscription {
+            nameCreated: Name @aws_subscribe(mutations:["createName"])
+          }
+
+          type Name @cacheControl(maxAge: 240) {
+            @node
+            name: String!
+          }
+
+          type Surname inherits Name @cacheControl(maxAge: 240) {
+            alias: String
+          }`
+
+          var schema_output = `
+          # Mutation
+          type Mutation {
+            createName(name: String!): Name
+          }
         
-        type Subscription {
-          nameCreated: Name @aws_subscribe(mutations:["createName"])
-        }
+          type Subscription {
+            nameCreated: Name @aws_subscribe(mutations:["createName"])
+          }
+        
+          type Name @cacheControl(maxAge: 240) {
+            name: String!
+          }
 
-        type Name @cacheControl(maxAge: 240) {
-          @node
-          name: String!
-        }
+          type Surname @cacheControl(maxAge: 240) {
+            alias: String
+            name: String!
+          }`
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct, '01')
 
-        type Surname inherits Name @cacheControl(maxAge: 240) {
-          alias: String
-        }`
-
-        var schema_output = `
-        # Mutation
-        type Mutation {
-          createName(name: String!): Name
-        }
-      
-        type Subscription {
-          nameCreated: Name @aws_subscribe(mutations:["createName"])
-        }
-      
-        type Name @cacheControl(maxAge: 240) {
-          name: String!
-        }
-
-        type Surname @cacheControl(maxAge: 240) {
-          name: String!
-          alias: String
-        }`
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct, '01')
-
-        var schema_02 = `
-        enum OperationType {
-          INVEST
-          WITHDRAW
-        }
-        type Transaction {
-          id: ID! @unique
-          user: User!
-          date: DateTime!
-          operationType: OperationType!
-          amount: Float!
-          tx: String
-          notes: String
-        }
-
-        enum Role {
-          ADMIN
-          USER
-        }
-
-        type User {
-          id: ID! @unique
-          email: String! @unique
-          name: String!
-          roles: [Role!]!
-          referrer: User @relation(name: "UserReferrerRelation")
-          referrals: [User!]! @relation(name: "UserReferralsRelation")
-          password: String!
-          rate: Float!
-        }`
-
-        var  schema_output_02 = `
-        type Transaction {
+          var schema_02 = `
+          enum OperationType {
+            INVEST
+            WITHDRAW
+          }
+          type Transaction {
             id: ID! @unique
-            user: User! 
+            user: User!
             date: DateTime!
             operationType: OperationType!
             amount: Float!
             tx: String
             notes: String
-        }
-        type User {
+          }
+
+          enum Role {
+            ADMIN
+            USER
+          }
+
+          type User {
             id: ID! @unique
             email: String! @unique
             name: String!
@@ -951,389 +1159,430 @@ var runtest = function(s2s, assert) {
             referrals: [User!]! @relation(name: "UserReferralsRelation")
             password: String!
             rate: Float!
-        }
-        enum OperationType {
-            INVEST
-            WITHDRAW
-        }
-        enum Role {
-            ADMIN
-            USER
-        }`
+          }`
 
-        var output_02 = transpileSchema(schema_02)
-        var answer_02 = compressString(output_02)
-        var correct_02 = compressString(schema_output_02)
-        assert.equal(answer_02,correct_02, '02')
+          var  schema_output_02 = `
+          type Transaction {
+              id: ID! @unique
+              user: User! 
+              date: DateTime!
+              operationType: OperationType!
+              amount: Float!
+              tx: String
+              notes: String
+          }
+          type User {
+              id: ID! @unique
+              email: String! @unique
+              name: String!
+              roles: [Role!]!
+              referrer: User @relation(name: "UserReferrerRelation")
+              referrals: [User!]! @relation(name: "UserReferralsRelation")
+              password: String!
+              rate: Float!
+          }
+          enum OperationType {
+              INVEST
+              WITHDRAW
+          }
+          enum Role {
+              ADMIN
+              USER
+          }`
+
+          var output_02 = transpileSchema(schema_02)
+          var answer_02 = compressString(output_02)
+          var correct_02 = compressString(schema_output_02)
+          assert.equal(answer_02,correct_02, '02')
+        })
       })
-      it('17 - INHERITANCE: Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
-        var output = transpileSchema(`
-        type Person {
-          firstname: String
-          lastname: String
-        }
+      describe('INHERITANCE', () => {
+        it('01 - Should not let a type inherits from a super type when the \'inherits\' keyword has been commented out on the same line (e.g. \'type User { #inherits Person {\').', () => {
+          var output = transpileSchema(`
+          type Person {
+            firstname: String
+            lastname: String
+          }
 
-        type User { #inherits Person {
-          username: String!
-          posts: [Post]
-        }
-        `)
-        var answer = compressString(output)
-        var correct = compressString(`
-        type Person {
-          firstname: String
-          lastname: String
-        }
-
-        type User {
-            #inherits Person {
+          type User { #inherits Person {
             username: String!
             posts: [Post]
-        }
-        `)
-        assert.equal(answer,correct)
-      })
-      it('18 - INHERITANCE: Should add properties from the super type to the sub type.', () => {
-        var output = transpileSchema(`
-        type Post {
-          id: ID! 
-          name: String!
-        }
-        type PostUserRating inherits Post {
-          rating: PostRating!
-        }
-        `)
-        var answer = compressString(output)
-        var correct = compressString(`
-        type Post {
-            id: ID!
-            name: String!
-        }
+          }
+          `)
+          var answer = compressString(output)
+          var correct = compressString(`
+          type Person {
+            firstname: String
+            lastname: String
+          }
 
-        type PostUserRating {
-            id: ID!
+          type User {
+              #inherits Person {
+              username: String!
+              posts: [Post]
+          }
+          `)
+          assert.equal(answer,correct)
+        })
+        it('02 - Should add properties from the super type to the sub type.', () => {
+          var output = transpileSchema(`
+          type Post {
+            id: ID! 
             name: String!
+          }
+          type PostUserRating inherits Post {
             rating: PostRating!
-        }
-        `)
-        assert.equal(answer,correct)
-      })
-      it('19 - INHERITANCE: Should support multiple inheritance type.', () => {
-        var output = transpileSchema(`
-        type Name {  
-          name: String! 
-        } 
-        type Author { 
-          author: String! 
-        }
-        type PostUserRating inherits Name,Author {
-          rating: String!
-        }`)
-        var answer = compressString(output)
-        var correct = compressString(`
-        type Name { 
-          name: String! 
-        }
-        type Author { 
-          author: String! 
-        }
-        type PostUserRating {
-          name: String! 
-          author: String! 
-          rating: String!
-        }`)
-        assert.equal(answer,correct)
-      })
-      it('20 - INHERITANCE: Should support multiple inheritance type with implements interface.', () => {
-        var output = transpileSchema(`
-        interface Node  {  
-          id: Int! 
-        } 
-        type Name {  
-          name: String! 
-        } 
-        type Author { 
-          author: String! 
-        }
-        type PostUserRating inherits Name,Author implements Node {
-          id: Int!
-          rating: String!
-        }`)
-        var answer = compressString(output)
-        var correct = compressString(`
-        interface Node {
-          id:Int!
-        }
-        type Name { 
-          name: String! 
-        }
-        type Author { 
-          author: String! 
-        }
-        type PostUserRating implements Node {
-          name: String! 
-          author: String! 
-          id: Int! 
-          rating: String!
-        }`)
-        assert.equal(answer,correct)
-      })
-      it('21 - INHERITANCE: Should throw an error if inherited type is missing.', () => {
-        assert.throws(() =>
-          transpileSchema(`
+          }
+          `)
+          var answer = compressString(output)
+          var correct = compressString(`
+          type Post {
+              id: ID!
+              name: String!
+          }
+
+          type PostUserRating {
+              rating: PostRating!
+              id: ID!
+              name: String!
+          }
+          `)
+          assert.equal(answer,correct)
+        })
+        it('03 - Should support multiple inheritance type.', () => {
+          var output = transpileSchema(`
           type Name {  
             name: String! 
+          } 
+          type Author { 
+            author: String! 
           }
           type PostUserRating inherits Name,Author {
             rating: String!
-          }`),
-          'Schema error: type PostUserRating cannot find inherited type Author'
-        )
-      })
-      it('22 - INHERITANCE: Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'" or "type=\'INTERFACE\'".', () => {
-        assert.throws(() =>
-          transpileSchema(`
-          input Name {  
+          }`)
+          var answer = compressString(output)
+          var correct = compressString(`
+          type Name { 
             name: String! 
           }
-          type PostUserRating inherits Name {
-            rating: String!
-          }`),
-          'Schema error: type PostUserRating cannot inherit from INPUT Name.'
-        )
-      })
-      it('23 - INHERITANCE: Should support inheriting from an INTERFACE.', () => {
-        var schema = `
-          interface Name {  
-            name: String! 
-          }
-          type PostUserRating inherits Name {
-            rating: String!
-          }`
-
-        var schema_output = `
-          interface Name {  
-            name: String! 
+          type Author { 
+            author: String! 
           }
           type PostUserRating {
-            name: String!
             rating: String!
-          }`
-
-
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-      it('24 - INHERITANCE: Should support inheriting from an INTERFACE and implementing it.', () => {
-        var schema = `
-          interface Name {  
+            name: String! 
+            author: String! 
+          }`)
+          assert.equal(answer,correct)
+        })
+        it('04 - Should support multiple inheritance type with implements interface.', () => {
+          var output = transpileSchema(`
+          interface Node  {  
+            id: Int! 
+          } 
+          type Name {  
+            name: String! 
+          } 
+          type Author { 
+            author: String! 
+          }
+          type PostUserRating inherits Name,Author implements Node {
+            id: Int!
+            rating: String!
+          }`)
+          var answer = compressString(output)
+          var correct = compressString(`
+          interface Node {
+            id:Int!
+          }
+          type Name { 
             name: String! 
           }
-          type PostUserRating inherits Name implements Name {
+          type Author { 
+            author: String! 
+          }
+          type PostUserRating implements Node {
+            id: Int! 
             rating: String!
-          }`
-
-        var schema_output = `
-          interface Name {  
             name: String! 
-          }
-          type PostUserRating implements Name{
-            name: String!
-            rating: String!
-          }`
-
-
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-
-      it('25 - COMMENTS: Add management of description', () => {
-        var schema = `
-          # My comment
-
-          """
-          Description with multiple 
-          lines of my interface
-          """
-          interface Name {  
-            "Description of a field"
-            name: String! 
-          }
-
-          "Single line comment of the type"
-          type PostUserRating inherits Name implements Name {
-            """
-            Multi-line comment of member
-            """
-            rating: String!
-            # FIXME: Just a comment
-            other: Int
-          }
-          
-          "Test on enum"
-          enum SolutionModeleEnum {
-              "Comment 1"
-              P1
-
-              """
-              Comment 2 
-              multiline
-              """
-              P2
-
-              # Comment
-              P3
-          }
-          
-          # My comment
-          # multi-line
-          type AutreType {
-            x: Boolean
-          }
-
-          `
-
-        var schema_output = `
-          # My comment
-          """
-          Description with multiple
-          lines of my interface
-          """
-          interface Name { 
-              "Description of a field"
-              name: String!
-          }
-          
-          "Single line comment of the type"
-          type PostUserRating implements Name { 
-              "Description of a field"
-              name: String!
-              """
-              Multi-line comment of member
-              """
+            author: String! 
+          }`)
+          assert.equal(answer,correct)
+        })
+        it('05 - Should throw an error if inherited type is missing.', () => {
+          assert.throws(() =>
+            transpileSchema(`
+            type Name {  
+              name: String! 
+            }
+            type PostUserRating inherits Name,Author {
               rating: String!
-              # FIXME: Just a comment
-              other: Int
-          }
-          
-          # My comment
-          # multi-line
-          type AutreType { 
-              x: Boolean
-          }
-          
-          "Test on enum"
-          enum SolutionModeleEnum { 
-              "Comment 1"
-              P1
-              """
-              Comment 2
-              multiline
-              """
-              P2
-              # Comment
-              P3
-          }`
+            }`),
+            'Schema error: Type \'Author\' cannot be found in the schema.'
+          )
+        })
+        it('06 - Should throw an error if inherits from wrong type, it should be of "type=\'TYPE\'" or "type=\'INTERFACE\'".', () => {
+          assert.throws(() =>
+            transpileSchema(`
+            input Name {  
+              name: String! 
+            }
+            type PostUserRating inherits Name {
+              rating: String!
+            }`),
+            'Schema error: type PostUserRating cannot inherit from INPUT Name.'
+          )
+        })
+        it('07 - Should support inheriting from an INTERFACE.', () => {
+          var schema = `
+            interface Name {  
+              name: String! 
+            }
+            type PostUserRating inherits Name {
+              rating: String!
+            }`
+
+          var schema_output = `
+            interface Name {  
+              name: String! 
+            }
+            type PostUserRating {
+              rating: String!
+              name: String!
+            }`
 
 
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('08 - Should support inheriting from an INTERFACE and implementing it.', () => {
+          var schema = `
+            interface Name {  
+              name: String! 
+            }
+            type PostUserRating inherits Name implements Name {
+              rating: String!
+            }`
+
+          var schema_output = `
+            interface Name {  
+              name: String! 
+            }
+            type PostUserRating implements Name{
+              rating: String!
+              name: String!
+            }`
+
+
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('09 - Should support inheriting from an generic types.', () => {
+          var schema_01 = `
+            enum MyEnum {
+              option1
+              option2
+            }
+
+            type BaseGeneric<T> {
+              enumeratedThing: T!
+              otherProperty: String
+            }
+
+            type FinalType inherits BaseGeneric<MyEnum> {
+              someOtherProperty: String!  
+            }`
+
+          var schema_output_01 = `
+            type FinalType {
+              someOtherProperty: String!
+              enumeratedThing: MyEnum!
+              otherProperty: String
+            }
+
+            enum MyEnum {
+              option1
+              option2
+            }
+
+            type BaseGenericMyEnum {
+              enumeratedThing: MyEnum!
+              otherProperty: String
+            }`
+
+
+          var output_01 = transpileSchema(schema_01)
+          var answer_01 = compressString(output_01)
+          var correct_01 = compressString(schema_output_01)
+          assert.equal(answer_01,correct_01)
+
+          var schema_02 = `
+            enum MyEnum {
+              option1
+              option2
+            }
+
+            type Node {
+              id: ID
+            }
+
+            type BaseGeneric<T> inherits Node  {
+              enumeratedThing: T!
+              otherProperty: String
+            }
+
+            type Person {
+              name: String
+            }
+
+            type SomethingElse inherits Person  {
+              data: BaseGeneric<Int>
+            }
+
+            type FinalType inherits BaseGeneric<MyEnum> {
+              someOtherProperty: String!  
+            }`
+
+          var schema_output_02 = `
+            type Node {
+              id: ID
+            }
+
+            type Person {
+              name: String
+            }
+
+            type SomethingElse {
+              data: BaseGenericInt
+              name: String
+            }
+
+            type FinalType {
+              someOtherProperty: String!
+              enumeratedThing: MyEnum!
+              otherProperty: String
+              id: ID
+            }
+            
+            enum MyEnum {
+              option1
+              option2
+            }
+
+            type BaseGenericInt {
+              enumeratedThing: Int!
+              otherProperty: String
+              id: ID
+            }
+
+            type BaseGenericMyEnum {
+              enumeratedThing: MyEnum!
+              otherProperty: String
+              id: ID
+            }`
+
+
+          var output_02 = transpileSchema(schema_02)
+          var answer_02 = compressString(output_02)
+          var correct_02 = compressString(schema_output_02)
+          assert.equal(answer_02,correct_02)
+        })
       })
-      it('26 - FIX: Should not duplicate properties', () => {
-         var schema = `
-          type Organism{
-            uuid:ID!
-          }
+      describe('BUG FIXES', () => {
+        it('01 - Should not duplicate properties', () => {
+           
+          var schema = `
+            type Organism {
+              uuid:ID!
+            }
 
-          type People inherits Organism{
-            name:String
-          }
+            type People inherits Organism{
+              name:String
+            }
 
-          type Man inherits People{
-            name:String
-            bearded:Boolean
-          }         
-          type Boy inherits Man,People,Organism{
-            uuid:ID!
-            name:String
-            bearded:Boolean
-          }
-          `
+            type Man inherits People{
+              name:String
+              bearded:Boolean
+            }         
+            type Boy inherits Man,People,Organism{
+              uuid:ID!
+              name:String
+              bearded:Boolean
+            }
+            `
 
-        var schema_output = `
-          type Organism{
-            uuid:ID!
-          }
+          var schema_output = `
+            type Organism{
+              uuid:ID!
+            }
 
-          type People{
-            uuid:ID!
-            name:String
-          }
+            type People{
+              name:String
+              uuid:ID!
+            }
 
-          type Man{
-            uuid:ID!
-            name:String
-            bearded:Boolean
-          }
+            type Man{
+              name:String
+              bearded:Boolean
+              uuid:ID!
+            }
 
-          type Boy{
-            uuid:ID!
-            name:String
-            bearded:Boolean
-          }
-         `
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
+            type Boy{
+              uuid:ID!
+              name:String
+              bearded:Boolean
+            }
+           `
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
+        it('02 - Override properties should not be a property of the parent class', () => {
+          var schema = `
+            type Organism {
+              uuid:ID!
+              age:Int
+            }
+
+            type People inherits Organism {
+              name:String
+              age:String
+            }
+            type Person inherits People {
+              age:Int
+            }
+            `
+          var schema_output = `
+            type Organism {
+              uuid:ID!
+              age:Int
+            }
+
+            type People{
+              name:String
+              age:String
+              uuid:ID!
+            }
+
+            type Person{
+              age:Int
+              name:String
+              uuid:ID!
+            }
+           `
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct)
+        })
       })
-      it('27 - FIX: Override properties should not be a property of the parent class', () => {
-         var schema = `
-          type Organism{
-            uuid:ID!
-            age:Int
-          }
+    })
 
-          type People inherits Organism{
-            name:String
-            age:String
-          }
-          type Person inherits People{
-            age:Int
-          }
-          `
-        var schema_output = `
-          type Organism{
-            uuid:ID!
-            age:Int
-          }
-
-          type People{
-            uuid:ID!
-            name:String
-            age:String
-          }
-
-          type Person{
-            uuid:ID!
-            name:String
-            age:Int
-          }
-         `
-        var output = transpileSchema(schema)
-        var answer = compressString(output)
-        var correct = compressString(schema_output)
-        assert.equal(answer,correct)
-      })
-    }))
-
-  describe('graphqls2s', () =>
     describe('#isTypeGeneric', () =>
       it('Should test whether or not a type is a generic type based on predefined type constraints.', () => {
 
@@ -1345,9 +1594,8 @@ var runtest = function(s2s, assert) {
         assert.isOk(!isTypeGeneric('Product', 'T'), '\'Product\', \'T\' should NOT work.')
         assert.isOk(!isTypeGeneric('Paged<Product>', 'T'), '\'Paged<Product>\', \'T\' should NOT work.')
         assert.isOk(!isTypeGeneric('[Paged<Product>]', 'T'), '\'[Paged<Product>]\', \'T\' should NOT work.')
-      })))
+      }))
 
-  describe('graphqls2s', () =>
     describe('#extractGraphMetadata: EXTRACT METADATA', () =>
       it('Should extract all metadata (i.e. data starting with \'@\') located on top of schema types of properties.', () => {
         var output = extractGraphMetadata(`
@@ -1391,9 +1639,8 @@ var runtest = function(s2s, assert) {
         assert.isOk(meta2.parent.metadata)
         assert.equal(meta2.parent.metadata.type, 'TYPE')
         assert.equal(meta2.parent.metadata.name, 'node')
-      })))
+      }))
 
-  describe('graphqls2s', () =>
     describe('#getSchemaAST', () => {
       it('01 - BASICS: Should extract all types and their properties including their respective comments.', () => {
         var schema = `
@@ -1515,22 +1762,22 @@ var runtest = function(s2s, assert) {
         assert.equal(typeMeta1.body, '(() => { return 1*2; })')
         assert.isOk(schemaPart1.blockProps)
         assert.equal(schemaPart1.blockProps.length, 4)
-        var typeMeta1Prop1 = schemaPart1.blockProps[0]
+        var typeMeta1Prop1 = schemaPart1.blockProps[3]
         assert.equal(typeMeta1Prop1.details.name, 'id')
         assert.isOk(typeMeta1Prop1.details.metadata)
         assert.equal(!typeMeta1Prop1.details.metadata.body, true)
         assert.equal(typeMeta1Prop1.details.metadata.name, 'primaryKey')
-        var typeMeta1Prop2 = schemaPart1.blockProps[1]
+        var typeMeta1Prop2 = schemaPart1.blockProps[2]
         assert.equal(typeMeta1Prop2.details.name, 'name')
         assert.isOk(typeMeta1Prop2.details.metadata)
         assert.equal(!typeMeta1Prop2.details.metadata.body, true)
         assert.equal(typeMeta1Prop2.details.metadata.name, 'boris')
-        var typeMeta1Prop3 = schemaPart1.blockProps[2]
+        var typeMeta1Prop3 = schemaPart1.blockProps[0]
         assert.equal(typeMeta1Prop3.details.name, 'rating')
         assert.isOk(typeMeta1Prop3.details.metadata)
         assert.equal(typeMeta1Prop3.details.metadata.body, '((args) => { return \'hello world\'; })')
         assert.equal(typeMeta1Prop3.details.metadata.name, 'brendan')
-        var typeMeta1Prop4 = schemaPart1.blockProps[3]
+        var typeMeta1Prop4 = schemaPart1.blockProps[1]
         assert.equal(typeMeta1Prop4.details.name, 'creationDate')
         assert.isOk(!typeMeta1Prop4.details.metadata)
 
@@ -1556,12 +1803,12 @@ var runtest = function(s2s, assert) {
         assert.equal(!typeMeta3.body, true)
         assert.isOk(schemaPart3.blockProps)
         assert.equal(schemaPart3.blockProps.length, 2)
-        var typeMeta3Prop1 = schemaPart3.blockProps[0]
+        var typeMeta3Prop1 = schemaPart3.blockProps[1]
         assert.equal(typeMeta3Prop1.details.name, 'id')
         assert.isOk(typeMeta3Prop1.details.metadata)
         assert.equal(!typeMeta3Prop1.details.metadata.body, true)
         assert.equal(typeMeta3Prop1.details.metadata.name, 'primaryKey')
-        var typeMeta3Prop2 = schemaPart3.blockProps[1]
+        var typeMeta3Prop2 = schemaPart3.blockProps[0]
         assert.equal(typeMeta3Prop2.details.name, 'name')
         assert.isOk(typeMeta3Prop2.details.metadata)
         assert.equal(!typeMeta3Prop2.details.metadata.body, true)
@@ -1602,9 +1849,8 @@ var runtest = function(s2s, assert) {
           var queryAST = getQueryAST(query, null, schemaAST)
           assert.isOk(queryAST, '01')
       })
-    }))
+    })
 
-  describe('graphqls2s', () =>
     describe('#getQueryAST', () => {
       it('01 - GET METADATA: Should retrieve all metadata associated to the query.', () => {
 
@@ -1796,46 +2042,50 @@ var runtest = function(s2s, assert) {
         assert.equal(paths[1].type, '[Address]')
       })
       it('04 - BASIC TYPES SUPPORT: Should support queries with for basic types (id, string, int, boolean, float).', () => {
+        
         var schema = `
-        type Property {
-          inspectionSchedule: InspectionSchedule
-        }
-
-        input PagingInput {
-          after: ID 
-          limit: Int 
-        }
-
-        type InspectionSchedule {
-          id: ID
-          nbrOfVisits: Int
-          byAppointment: Boolean
-          recurring: Boolean
-          description: String 
-          price: Float 
-        }
-
-        input DirectionalPagingInput inherits PagingInput {
-          before: ID 
-          direction: SortDirection
-        }
-
-        type Query {
-          properties(paging: DirectionalPagingInput): [Property]
-        }`
-
-      var query_input = `query {
-        properties (paging: { limit: 10 }) {
-          inspectionSchedule {
-            id
-            nbrOfVisits
-            byAppointment
-            recurring
-            description
-            price
+          type Property {
+            inspectionSchedule: InspectionSchedule
           }
-        } 
-      }`
+
+          input PagingInput {
+            after: ID 
+            limit: Int 
+          }
+
+          type InspectionSchedule {
+            id: ID
+            nbrOfVisits: Int
+            byAppointment: Boolean
+            recurring: Boolean
+            description: String 
+            price: Float 
+          }
+
+          input DirectionalPagingInput inherits PagingInput {
+            before: ID 
+            direction: SortDirection
+          }
+
+          type Query {
+            properties(paging: DirectionalPagingInput): [Property]
+          }
+        `
+
+        var query_input = `
+          query {
+            properties (paging: { limit: 10 }) {
+              inspectionSchedule {
+                id
+                nbrOfVisits
+                byAppointment
+                recurring
+                description
+                price
+              }
+            } 
+          }
+        `
         var schemaAST = getSchemaAST(schema)
         var queryOpASTIntrospec = getQueryAST(query_input, null, schemaAST, { defrag: true })
 
@@ -1844,7 +2094,6 @@ var runtest = function(s2s, assert) {
 
         assert.equal(queryAnswer, query, 'The rebuild query should match the filtered mock.')
       })
-
       it('05 - DETECT STRING PROPS IN QUERY: Should return a boolean indicating whether a property is present in the query or not.', () => {
         var schema = `
         type User {
@@ -1906,7 +2155,6 @@ var runtest = function(s2s, assert) {
         assert.isNotOk(queryAST.containsProp('users.name'), '09')
         assert.isNotOk(queryAST.containsProp('bankDetails.account.id'), '10')
       })
-
       it('06 - DETECT REGEX PROPS IN QUERY: Should return a boolean indicating whether a property is present in the query or not.', () => {
         var schema = `
         type User {
@@ -1962,9 +2210,8 @@ var runtest = function(s2s, assert) {
         assert.isOk(queryAST.containsProp(/users\.details\.(?!id)/), '03')
         assert.isOk(queryAST.containsProp(/users\.(?!username)/), '05')
       })
-    }))
+    })
 
-  describe('graphqls2s', () =>
     describe('#buildQuery', () => {
       it('01 - REBUILD QUERY FROM QUERY AST: Should rebuild the query exactly similar to its original based on the query AST.', () => {
         var schema = `
@@ -2734,7 +2981,8 @@ var runtest = function(s2s, assert) {
         }`)
         assert.equal(answer,correct)
       })
-    }))
+    })
+  })
 }
 
 if (browserctxt) runtest(graphqls2s, assert)
