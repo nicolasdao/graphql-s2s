@@ -6,7 +6,7 @@
   "scripts": {
     "build": "WEBPACK_ENV=build webpack",
     "dev": "WEBPACK_ENV=dev webpack",
-    "lint": "eslint graphqls2s.js src/ test/ --fix",
+    "lint": "eslint src/ test/ --fix",
     "push": "git push --follow-tags origin master && npm publish",
     "rls": "standard-version --release-as",
     "test": "mocha ./test/node/*.js",

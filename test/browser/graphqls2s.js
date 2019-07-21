@@ -1087,7 +1087,7 @@ var runtest = function(s2s, assert) {
           var correct = compressString(schema_output)
           assert.equal(answer,correct)
         })
-        it('03 - Should supports rogue native directives, i.e., native directive without explicit definitions (fix #14).', () => {
+        it('03 - Should support rogue native directives, i.e., native directive without explicit definitions (fix #14).', () => {
           var schema = `
           # Mutation
           type Mutation {
@@ -1194,6 +1194,24 @@ var runtest = function(s2s, assert) {
           var answer_02 = compressString(output_02)
           var correct_02 = compressString(schema_output_02)
           assert.equal(answer_02,correct_02, '02')
+        })
+        it('04 - Should support directives with complex body (fix #37).', () => {
+          var schema = `
+          # Mutation
+          type Mutation {
+            CreateArea(name: String): Area @cypher(statement: "CREATE (a:Area {name: $name, creationDate: timestamp()}) RETURN a")
+          }`
+
+          var schema_output = `
+          # Mutation
+          type Mutation {
+            CreateArea(name: String): Area @cypher(statement: "CREATE (a:Area {name: $name, creationDate: timestamp()}) RETURN a")
+          }`
+
+          var output = transpileSchema(schema)
+          var answer = compressString(output)
+          var correct = compressString(schema_output)
+          assert.equal(answer,correct, '01')
         })
       })
       describe('INHERITANCE', () => {

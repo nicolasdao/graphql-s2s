@@ -12,7 +12,7 @@
 // 	
 // Generic Types:
 // ==============
-// 	_createNewSchemaObjectFromGeneric: This function is the one that created new types from Generic Types.
+// 	_createNewSchemaObjectFromGeneric: This function is the one that creates new types from Generic Types.
 
 const _ = require('lodash')
 const { chain, log, escapeGraphQlSchema, getQueryAST, buildQuery, newShortId, isScalarType } = require('./utilities')
@@ -50,21 +50,42 @@ const escapeGraphQlSchemaPlus = (sch, cr, t) => {
 	return _s[sch]
 }
 
+const escapeDirectives = (str, metadata) => {
+	const directives = (metadata || [])
+		.filter(({ directiveValues }) => directiveValues && directiveValues[0] && directiveValues[0].id && directiveValues[0].value)
+		.reduce((acc, { directiveValues }) => {
+			acc.push(...directiveValues)
+			return acc
+		}, [])
+
+	return directives.reduce((acc,{ id, value }) => {
+		acc[0] = acc[0].replace(value, id)
+		acc[1].push({ id, value })
+		return acc
+	},[str, []])
+}
+
 /**
- * Gets a first rough breakdown of the string schema
- * @param  {String} sch Original GraphQl Schema
- * @return {Array}      Using regex, the interfaces, types, inputs, enums and abstracts entities are isolated
- *                      e.g. [{
- *                      		property: 'type Query { bars: [Bar]! }',
- *                      		block: [ 'bars: [Bar]!' ],
- *                      		extend: false
- *                      	},{
- *                      		property: 'type Bar { id: ID }',
- *                      		block: [ 'id: ID' ],
- *                      		extend: false
- *                      	}]
+ * Gets a first rough breakdown of the string schema.
+ * 
+ * @param  {String}  sch 								Original GraphQl Schema
+ * @param  {String}  metadata[].name					e.g., "cypher"
+ * @param  {String}  metadata[].body
+ * @param  {Boolean} metadata[].directive
+ * @param  {String}  metadata[].directiveValues[].id	e.g., "_RghS1T9k5_"
+ * @param  {String}  metadata[].directiveValues[].value	e.g., "@cypher(statement: \"CREATE (a:Area {name: $name, creationDate: timestamp()}) RETURN a\")"
+ * @return {Array}      								Using regex, the interfaces, types, inputs, enums and abstracts entities are isolated
+ *                                    					e.g. [{
+ *                      										property: 'type Query { bars: [Bar]! }',
+ *                      										block: [ 'bars: [Bar]!' ],
+ *                      										extend: false
+ *                      									},{
+ *                      										property: 'type Bar { id: ID }',
+ *                      										block: [ 'id: ID' ],
+ *                      										extend: false
+ *                      									}]
  */
-const _getSchemaBits = (sch='') => {
+const _getSchemaBits = (sch='', metadata) => {
 	const escapedSchemaWithComments = escapeGraphQlSchemaPlus(sch, carrReturnEsc, tabEsc)
 
 	const comments = [
@@ -82,18 +103,20 @@ const _getSchemaBits = (sch='') => {
 	// We append '\n' to help isolating the 'union'
 	const schemaWithoutComments = ' ' + sch.replace(/#(.*?)\n/g, '').replace(/"""\s*\n([^]*?)\n\s*"""\s*\n/g, '').replace(/"([^"]+)"\n/g, '') + '\n'
 	const escapedSchemaWithoutComments = escapeGraphQlSchemaPlus(schemaWithoutComments, carrReturnEsc, tabEsc)
+	const [escapedSchemaWithEscCommentsAndDirectives, directives] = escapeDirectives(escSchemaWithEscComments, metadata)
+
 	return _.flatten([TYPE_REGEX, INPUT_REGEX, ENUM_REGEX, INTERFACE_REGEX, ABSTRACT_REGEX, SCALAR_REGEX, UNION_REGEX]
-	.map(rx =>
+	.map(rx => {
 		// 1. Apply the regex matching
-		chain((
+		return chain((
 			rx.type == 'scalar' ? escapedSchemaWithoutComments :
 			rx.type == 'union' ? schemaWithoutComments :
-			escSchemaWithEscComments).match(rx.regex) || [])
+			escapedSchemaWithEscCommentsAndDirectives).match(rx.regex) || [])
 		// 2. Filter the right matches
-		.next(regexMatches =>
+		.next(regexMatches => 
 			rx.type == 'scalar' ? regexMatches.filter(m => m.indexOf('scalar') == 0 || m.match(/^(?![a-zA-Z0-9])/)) :
 			rx.type == 'union' ? regexMatches.filter(m => m.indexOf('union') == 0 || m.match(/^(?![a-zA-Z0-9])/)) : regexMatches)
-		// 3. Replace the excaped comments with their true value
+		// 3. Replace the escaped comments with their true value
 		.next(regexMatches => regexMatches.map(b => (b.match(/#(.*?)░/g) || []).reduce((acc,m) => {
 			const value = (tokens.find(t => t.id == m) || {}).value
 			return value ? acc.replace(m, value) : acc
@@ -102,13 +125,14 @@ const _getSchemaBits = (sch='') => {
 		.next(regexMatches => {
 			const transform =
 				rx.type == 'scalar' ? _breakdownScalarBit :
-				rx.type == 'union' ? _breakdownUnionBit : _breakdownSchemabBit
+				rx.type == 'union' ? _breakdownUnionBit : (str => _breakdownSchemabBit(str, directives))
 			return regexMatches.map(str => transform(str))
 		})
-		.val()))
+		.val()}))
 }
 
-const _breakdownSchemabBit = str => {
+const _breakdownSchemabBit = (str, directives) => {
+	directives = directives || []
 	const blockMatch = str.match(/{(.*?)░([^#]*?)}/)
 	if (!blockMatch) {
 		const msg = 'Schema error: Missing block'
@@ -116,8 +140,14 @@ const _breakdownSchemabBit = str => {
 		throw new Error(msg)
 	}
 
-	const block = _.toArray(_(blockMatch[0].replace(/_t_/g, '').replace(/^{/,'').replace(/}$/,'').split(carrReturnEsc).map(x => x.trim())).filter(x => x != ''))
-	const rawProperty = str.split(carrReturnEsc).join(' ').split(tabEsc).join(' ').replace(/ +(?= )/g,'').trim()
+	const [blockWithDirectives, rawProperty] = directives.reduce((acc, { id, value }) => {
+		acc[0] = acc[0].replace(id,value)
+		acc[1] = acc[1].replace(id,value)
+		return acc
+	}, [blockMatch[0], str.split(carrReturnEsc).join(' ').split(tabEsc).join(' ').replace(/ +(?= )/g,'').trim()])
+
+	const block = _.toArray(_(blockWithDirectives.replace(/_t_/g, '').replace(/^{/,'').replace(/}$/,'').split(carrReturnEsc).map(x => x.trim())).filter(x => x != ''))
+
 	const { property, extend } = rawProperty.indexOf('extend') == 0
 		? { property: rawProperty.replace('extend ', ''), extend: true }
 		: { property: rawProperty, extend: false }
@@ -777,58 +807,58 @@ const _resolveSchemaType = (schemaType, rawSchemaTypes, comments) => {
 }
 
 
-const _getObjWithExtensions = (schemaType, rawSchemaTypes) => {
-	if (schemaType && rawSchemaTypes && schemaType.inherits) {
+// const _getObjWithExtensions = (schemaType, rawSchemaTypes) => {
+// 	if (schemaType && rawSchemaTypes && schemaType.inherits) {
 
-		const key = `${schemaType.type}_${schemaType.name}_${schemaType.genericType}`
-		if (memoizedExtendedObject[key]) return memoizedExtendedObject[key]
+// 		const key = `${schemaType.type}_${schemaType.name}_${schemaType.genericType}`
+// 		if (memoizedExtendedObject[key]) return memoizedExtendedObject[key]
 
-		const superClass = rawSchemaTypes.filter(function(x) {
-			return schemaType.inherits.indexOf(x.name) > -1
-		}).value()
-		const superClassNames = rawSchemaTypes.map(function(x) {
-			return x.name
-		}).value()
-		//find missing classes
-		const missingClasses = _.difference(schemaType.inherits, superClassNames)
+// 		const superClass = rawSchemaTypes.filter(function(x) {
+// 			return schemaType.inherits.indexOf(x.name) > -1
+// 		}).value()
+// 		const superClassNames = rawSchemaTypes.map(function(x) {
+// 			return x.name
+// 		}).value()
+// 		//find missing classes
+// 		const missingClasses = _.difference(schemaType.inherits, superClassNames)
 
-		missingClasses.forEach(function(c){
-			throw new Error('Schema error: ' + schemaType.type.toLowerCase() + ' ' + schemaType.name + ' cannot find inherited ' + schemaType.type.toLowerCase() + ' ' + c)
-		})
+// 		missingClasses.forEach(function(c){
+// 			throw new Error('Schema error: ' + schemaType.type.toLowerCase() + ' ' + schemaType.name + ' cannot find inherited ' + schemaType.type.toLowerCase() + ' ' + c)
+// 		})
 
-		const superClassesWithInheritance = superClass.map(function(subClass){
+// 		const superClassesWithInheritance = superClass.map(function(subClass){
 
-			if (!_inheritingIsAllowed(schemaType, subClass)){
-				throw new Error('Schema error: ' + schemaType.type.toLowerCase() + ' ' + schemaType.name + ' cannot inherit from ' + subClass.type + ' ' + subClass.name + '.')  
-			}            
-			return _getObjWithExtensions(subClass, rawSchemaTypes)
-		})
+// 			if (!_inheritingIsAllowed(schemaType, subClass)){
+// 				throw new Error('Schema error: ' + schemaType.type.toLowerCase() + ' ' + schemaType.name + ' cannot inherit from ' + subClass.type + ' ' + subClass.name + '.')  
+// 			}            
+// 			return _getObjWithExtensions(subClass, rawSchemaTypes)
+// 		})
 
-		const objWithInheritance = {
-			type: schemaType.type,
-			name: schemaType.name,
-			genericType: schemaType.genericType,
-			originalBlockProps: schemaType.blockProps,
-			metadata: schemaType.metadata || _.last(superClassesWithInheritance).metadata || null,
-			directive: schemaType.directive,
-			implements: _.toArray(_.uniq(_.concat(schemaType.implements, superClassesWithInheritance.implements).filter(function(x) {
-				return x
-			}))),
-			inherits: superClassesWithInheritance,
-			blockProps: (superClassesWithInheritance instanceof Array ?
-				_.toArray(_.flatten(_.concat(_.flatten(superClassesWithInheritance.map(function(subClass){
-				return subClass.blockProps.filter(prop=>!schemaType.blockProps.find(originalProp=>originalProp.details.name==prop.details.name))
-			})), schemaType.blockProps))):
-				_.toArray(_.flatten(_.concat(superClassesWithInheritance.blockProps, schemaType.blockProps)))
-			)
-		}
+// 		const objWithInheritance = {
+// 			type: schemaType.type,
+// 			name: schemaType.name,
+// 			genericType: schemaType.genericType,
+// 			originalBlockProps: schemaType.blockProps,
+// 			metadata: schemaType.metadata || _.last(superClassesWithInheritance).metadata || null,
+// 			directive: schemaType.directive,
+// 			implements: _.toArray(_.uniq(_.concat(schemaType.implements, superClassesWithInheritance.implements).filter(function(x) {
+// 				return x
+// 			}))),
+// 			inherits: superClassesWithInheritance,
+// 			blockProps: (superClassesWithInheritance instanceof Array ?
+// 				_.toArray(_.flatten(_.concat(_.flatten(superClassesWithInheritance.map(function(subClass){
+// 				return subClass.blockProps.filter(prop=>!schemaType.blockProps.find(originalProp=>originalProp.details.name==prop.details.name))
+// 			})), schemaType.blockProps))):
+// 				_.toArray(_.flatten(_.concat(superClassesWithInheritance.blockProps, schemaType.blockProps)))
+// 			)
+// 		}
 
-		memoizedExtendedObject[key] = objWithInheritance
-		return _resolveUsingTrivialMethod(objWithInheritance, rawSchemaTypes)
-	}
-	else
-		return _resolveUsingTrivialMethod(schemaType)
-}
+// 		memoizedExtendedObject[key] = objWithInheritance
+// 		return _resolveUsingTrivialMethod(objWithInheritance, rawSchemaTypes)
+// 	}
+// 	else
+// 		return _resolveUsingTrivialMethod(schemaType)
+// }
 
 const _inheritingIsAllowed = (obj, subClass) => {
 	if (obj.type === 'TYPE')
@@ -939,83 +969,83 @@ const isTypeGeneric = (type, genericLetter) => {
  * @return {Object}		newGenericType.obj					New generic type object's AST. 
  * @return {String}		newGenericType.stringObj			New generic type schema string definition (e.g., 'type PagedQuestion {\n data: [Question!]!\n cursor: ID\n }')
  */
-const _createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBreakDown, memoizedNewSchemaObjectFromGeneric) => {
-	if (!memoizedNewSchemaObjectFromGeneric)
-		throw new Error('Missing required argument. \'memoizedNewSchemaObjectFromGeneric\' is required.')
-	if (isGen && memoizedNewSchemaObjectFromGeneric[name])
-		return memoizedNewSchemaObjectFromGeneric[name]
-	else if (isGen) {
-		const genObjName = chain(originName.split('<')).next(parts => `${parts[0]}<`).val()
-		const concreteType = (originName.match(/<(.*?)>/) || [null, null])[1]
-		if (!concreteType) throw new Error(`Schema error: Cannot find generic type in object ${originName}`)
-		const baseGenObj = schemaBreakDown.find(x => x.name.indexOf(genObjName) == 0)
-		if (!baseGenObj) throw new Error(`Schema error: Cannot find any definition for generic type starting with ${genObjName}`)
-		if (!baseGenObj.genericType) throw new Error(`Schema error: Schema object ${baseGenObj.name} is not generic!`)
+// const _createNewSchemaObjectFromGeneric = ({ originName, isGen, name }, schemaBreakDown, memoizedNewSchemaObjectFromGeneric) => {
+// 	if (!memoizedNewSchemaObjectFromGeneric)
+// 		throw new Error('Missing required argument. \'memoizedNewSchemaObjectFromGeneric\' is required.')
+// 	if (isGen && memoizedNewSchemaObjectFromGeneric[name])
+// 		return memoizedNewSchemaObjectFromGeneric[name]
+// 	else if (isGen) {
+// 		const genObjName = chain(originName.split('<')).next(parts => `${parts[0]}<`).val()
+// 		const concreteType = (originName.match(/<(.*?)>/) || [null, null])[1]
+// 		if (!concreteType) throw new Error(`Schema error: Cannot find generic type in object ${originName}`)
+// 		const baseGenObj = schemaBreakDown.find(x => x.name.indexOf(genObjName) == 0)
+// 		if (!baseGenObj) throw new Error(`Schema error: Cannot find any definition for generic type starting with ${genObjName}`)
+// 		if (!baseGenObj.genericType) throw new Error(`Schema error: Schema object ${baseGenObj.name} is not generic!`)
 
-		const blockProps = baseGenObj.blockProps.map(prop => {
-			let p = prop
-			if (isTypeGeneric(prop.details.result.name, baseGenObj.genericType)) {
-				let details = {
-					name: prop.details.name,
-					params: prop.params,
-					result: {
-						originName: prop.details.originName,
-						isGen: prop.details.isGen,
-						name: _replaceGenericWithType(prop.details.result.name, baseGenObj.genericType.split(','), concreteType)
-					}
-				}
-				if (prop.details.result.dependsOnParent) {
-					const propTypeIsRequired = prop.details.result.name.match(/!$/)
-					// e.g. [Paged<T>]
-					const propTypeName = propTypeIsRequired ? prop.details.result.name.replace(/!$/,'') : prop.details.result.name
-					const propTypeIsArray = propTypeName.match(/^\[.*\]$/)
-					// e.g. [Paged<Product>]
-					const originalConcretePropType = _replaceGenericWithType(propTypeName, prop.details.result.genericParentTypes, concreteType)
-					// e.g. Paged<Product>
-					const concretePropType = propTypeIsArray ? originalConcretePropType.replace(/^\[|\]$/g,'') : originalConcretePropType
-					const concreteGenProp = _getTypeDetails(concretePropType, prop.details.result.metadata)
-					// e.g. PagedProduct
-					const concreteGenPropName = _createNewSchemaObjectFromGeneric(concreteGenProp, schemaBreakDown, memoizedNewSchemaObjectFromGeneric).obj.name
-					// e.g. [PagedProduct]
-					let originalConcretePropTypeName = propTypeIsArray ? `[${concreteGenPropName}]` : concreteGenPropName
-					// e.g. [PagedProduct]!
-					originalConcretePropTypeName = originalConcretePropTypeName + (propTypeIsRequired ? '!' : '')
-					// e.g. [PagedProduct]! @isAuthenticated
-					originalConcretePropTypeName = prop.details.result.directive ? `${originalConcretePropTypeName} ${prop.details.result.directive}` : originalConcretePropTypeName
-					details.result = {
-						originName: prop.details.result.directive ? `${prop.details.result.name} ${prop.details.result.directive}` : prop.details.result.name,
-						isGen: true,
-						name: originalConcretePropTypeName
-					}
-				}
+// 		const blockProps = baseGenObj.blockProps.map(prop => {
+// 			let p = prop
+// 			if (isTypeGeneric(prop.details.result.name, baseGenObj.genericType)) {
+// 				let details = {
+// 					name: prop.details.name,
+// 					params: prop.params,
+// 					result: {
+// 						originName: prop.details.originName,
+// 						isGen: prop.details.isGen,
+// 						name: _replaceGenericWithType(prop.details.result.name, baseGenObj.genericType.split(','), concreteType)
+// 					}
+// 				}
+// 				if (prop.details.result.dependsOnParent) {
+// 					const propTypeIsRequired = prop.details.result.name.match(/!$/)
+// 					// e.g. [Paged<T>]
+// 					const propTypeName = propTypeIsRequired ? prop.details.result.name.replace(/!$/,'') : prop.details.result.name
+// 					const propTypeIsArray = propTypeName.match(/^\[.*\]$/)
+// 					// e.g. [Paged<Product>]
+// 					const originalConcretePropType = _replaceGenericWithType(propTypeName, prop.details.result.genericParentTypes, concreteType)
+// 					// e.g. Paged<Product>
+// 					const concretePropType = propTypeIsArray ? originalConcretePropType.replace(/^\[|\]$/g,'') : originalConcretePropType
+// 					const concreteGenProp = _getTypeDetails(concretePropType, prop.details.result.metadata)
+// 					// e.g. PagedProduct
+// 					const concreteGenPropName = _createNewSchemaObjectFromGeneric(concreteGenProp, schemaBreakDown, memoizedNewSchemaObjectFromGeneric).obj.name
+// 					// e.g. [PagedProduct]
+// 					let originalConcretePropTypeName = propTypeIsArray ? `[${concreteGenPropName}]` : concreteGenPropName
+// 					// e.g. [PagedProduct]!
+// 					originalConcretePropTypeName = originalConcretePropTypeName + (propTypeIsRequired ? '!' : '')
+// 					// e.g. [PagedProduct]! @isAuthenticated
+// 					originalConcretePropTypeName = prop.details.result.directive ? `${originalConcretePropTypeName} ${prop.details.result.directive}` : originalConcretePropTypeName
+// 					details.result = {
+// 						originName: prop.details.result.directive ? `${prop.details.result.name} ${prop.details.result.directive}` : prop.details.result.name,
+// 						isGen: true,
+// 						name: originalConcretePropTypeName
+// 					}
+// 				}
 
-				p = {
-					comments: prop.comments,
-					details: details,
-					value: _getPropertyValue(details)
-				}
-			}
+// 				p = {
+// 					comments: prop.comments,
+// 					details: details,
+// 					value: _getPropertyValue(details)
+// 				}
+// 			}
 
-			return p
-		})
+// 			return p
+// 		})
 
-		const newSchemaObjStr = _parseSchemaObjToString(baseGenObj.comments, baseGenObj.type, name, baseGenObj.implements, blockProps)
-		const result = {
-			obj: {
-				comments: baseGenObj.comments,
-				type: baseGenObj.type,
-				name,
-				implements: baseGenObj.implements,
-				blockProps: blockProps,
-				genericType: null
-			},
-			stringObj: newSchemaObjStr
-		}
-		memoizedNewSchemaObjectFromGeneric[name] = result
-		return result
-	}
-	else return { obj: null, stringObj: null }
-}
+// 		const newSchemaObjStr = _parseSchemaObjToString(baseGenObj.comments, baseGenObj.type, name, baseGenObj.implements, blockProps)
+// 		const result = {
+// 			obj: {
+// 				comments: baseGenObj.comments,
+// 				type: baseGenObj.type,
+// 				name,
+// 				implements: baseGenObj.implements,
+// 				blockProps: blockProps,
+// 				genericType: null
+// 			},
+// 			stringObj: newSchemaObjStr
+// 		}
+// 		memoizedNewSchemaObjectFromGeneric[name] = result
+// 		return result
+// 	}
+// 	else return { obj: null, stringObj: null }
+// }
 
 /**
  * Breaks down a schema into its bits and pieces.
@@ -1038,7 +1068,7 @@ const getSchemaParts = (graphQlSchema, metadata) => {
 	// 1. Extract all the comments
 	const comments = _getCommentsBits(graphQlSchema)
 	// 2. Extract all the blocks stripped out of all the comments. 
-	const schemaBits = _getSchemaBits(graphQlSchema)
+	const schemaBits = _getSchemaBits(graphQlSchema, metadata)
 	// 3. Classify the blocks in AST objects
 	const rawSchemaTypes = [_getInterfaces, _getAbstracts, _getTypes, _getInputs, _getEnums, _getScalars, _getUnions].reduce((acc, getObjects) => {
 		// 3.1. Creates the type
@@ -1135,7 +1165,6 @@ let graphqls2s = {
 	buildQuery,
 	isTypeGeneric
 }
-
 
 if (typeof(window) != 'undefined') window.graphqls2s = graphqls2s
 

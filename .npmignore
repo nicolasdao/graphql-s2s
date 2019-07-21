@@ -1,3 +1,4 @@
 lib/
 test/
 webpack.config.js
+_doc/
