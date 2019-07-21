@@ -1,3 +1,4 @@
 *.DS_Store
 *.orig
 node_modules/*
+lib/
