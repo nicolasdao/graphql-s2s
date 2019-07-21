@@ -1,6 +1,15 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [0.20.1](https://github.com/nicolasdao/graphql-s2s/compare/v0.20.0...v0.20.1) (2019-07-21)
+
+
+### Bug Fixes
+
+* Vulnerability issues reported from npm and github ([8ef7783](https://github.com/nicolasdao/graphql-s2s/commit/8ef7783))
+
+
 
 <a name="0.20.0"></a>
 # [0.20.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.19.2...v0.20.0) (2019-05-05)
