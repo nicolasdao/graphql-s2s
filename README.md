@@ -194,7 +194,7 @@ Metadata can also be used to customize generic types names as shown in section [
 
 This feature allows your GraphQl server to deconstruct any GraphQl query as an AST that can then be filtered and modified based on your requirements. That AST can then be rebuilt as a valid GraphQL query. A great example of that feature in action is the [__graphql-authorize__](https://github.com/nicolasdao/graphql-authorize.git) middleware for [__graphql-serverless__](https://github.com/nicolasdao/graphql-serverless) which filters query's properties based on the user's rights.
 
-For a concrete example, refer to the [code below](#deconstructing-transforming-rebuilding-queries).
+For a concrete example, refer to the [code below](#deconstructing---transforming---rebuilding-queries-1).
 
 # How To
 ## How to use a custom name on generic types?
