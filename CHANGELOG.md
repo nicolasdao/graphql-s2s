@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.21.0](https://github.com/nicolasdao/graphql-s2s/compare/v0.20.2...v0.21.0) (2021-09-29)
+
+
+### Bug Fixes
+
+* 2 vulnerabilities (1 high, 1 critical) ([37a860d](https://github.com/nicolasdao/graphql-s2s/commit/37a860dc34d0d2419e65432acfb391ef084f8911))
+* All vulnerabilities ([8e43828](https://github.com/nicolasdao/graphql-s2s/commit/8e438283221a2eccd1239a1ffe02743f237192b0))
+
 ### [0.20.2](https://github.com/nicolasdao/graphql-s2s/compare/v0.20.1...v0.20.2) (2019-07-21)
 
 
