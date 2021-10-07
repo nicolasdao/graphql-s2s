@@ -17,8 +17,10 @@ const { plugins, outputfile } = prod
 	: { plugins: [], outputfile: `${outputfilename}.js` } 
 
 module.exports = {
+	mode: prod ? 'production' : 'development',
 	entry: [
-		'babel-polyfill',
+		'core-js/stable',
+		'regenerator-runtime/runtime',
 		'./src/graphqls2s.js'
 	],
 	output: {
@@ -38,8 +40,10 @@ module.exports = {
 			test: /\.jsx?$/,
 			// Options to configure babel with
 			options: {
-				plugins: ['transform-runtime'],
-				presets: ['es2015'],
+				// plugins: ['transform-runtime'],
+				presets: [
+					['@babel/preset-env', {'modules': false}]
+				]
 			}
 		}, ]
 	},
