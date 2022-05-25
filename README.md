@@ -1,3 +1,6 @@
+
+> This project is still maintained but has been superseded by [graphql-schemax](https://github.com/nicolasdao/graphql-schemax). graphql-schemax takes the approach of compiling standard JSON object into a GraphQL Schema string.
+
 # GraghQL Schema-2-Schema Transpiler &middot;  [![NPM](https://img.shields.io/npm/v/graphql-s2s.svg?style=flat)](https://www.npmjs.com/package/graphql-s2s) [![Tests](https://travis-ci.org/nicolasdao/graphql-s2s.svg?branch=master)](https://travis-ci.org/nicolasdao/graphql-s2s) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) [![Neap](https://neap.co/img/made_by_neap.svg)](#this-is-what-we-re-up-to) [![npm downloads](https://img.shields.io/npm/dt/graphql-s2s.svg?style=flat)](https://www.npmjs.com/package/graphql-s2s)
 
 # Table Of Contents
