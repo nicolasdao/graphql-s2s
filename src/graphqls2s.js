@@ -516,7 +516,7 @@ const _getSchemaObject = (definitions, typeName, nameRegEx, metadata) =>
 			const directive = (typeDef.match(/@[a-zA-Z0-9_]+(.*?)$/) || [''])[0].trim().replace(/{$/, '').trim() || null
 
 			const _interface = implementsMatch
-				? implementsMatch[0].replace('implements ', '').replace('{', '').split(',').map(x => x.trim().split(' ')[0])
+				? implementsMatch[0].replace('implements ', '').replace('{', '').split('&').map(x => x.trim().split(' ')[0])
 				: null
 
 			const objectType = typeName.toUpperCase()
@@ -928,7 +928,7 @@ const _addComments = (obj, comments) => {
 const _parseSchemaObjToString = (comments, type, name, _implements, blockProps, extend=false, directive) =>
 	[
 		`${comments && comments != '' ? `\n${comments}` : ''}`,
-		`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name.replace('!', '')}${_implements && _implements.length > 0 ? ` implements ${_implements.join(', ')}` : ''} ${blockProps.some(x => x) ? `${directive ? ` ${directive} ` : ''}{`: ''} `,
+`${extend ? 'extend ' : ''}${type.toLowerCase()} ${name.replace('!', '')}${_implements && _implements.length > 0 ? ` implements ${_implements.join('& ')}` : ''} ${blockProps.some(x => x) ? `${directive ? ` ${directive} ` : ''}{`: ''} `,
 		blockProps.map(prop => `    ${prop.comments != '' ? `${prop.comments}\n    ` : ''}${prop.value}`).join('\n'),
 		blockProps.some(x => x) ? '}': ''
 	].filter(x => x).join('\n')
